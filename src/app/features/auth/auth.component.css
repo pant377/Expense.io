@@ -120,10 +120,52 @@
   padding: clamp(2rem, 5dvh, 4.5rem) clamp(2rem, 5vw, 4.5rem);
 }
 
-.auth-language-toggle {
+.auth-preferences {
   position: absolute;
   top: 1.25rem;
   right: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.auth-theme-toggle {
+  display: grid;
+  width: 42px;
+  min-width: 42px;
+  height: 38px;
+  place-items: center;
+  padding: 0;
+  color: var(--primary-dark);
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.auth-theme-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+.auth-theme-toggle:hover {
+  background: white;
+  border-color: #bfd4d1;
+}
+
+.auth-theme-toggle:focus-visible {
+  outline: 3px solid rgba(10, 124, 116, 0.18);
+  outline-offset: 2px;
+}
+
+:host-context(:root[data-theme="dark"]) .auth-theme-toggle {
+  color: var(--ink);
+  background: rgba(27, 45, 52, 0.9);
+  border-color: #3b5059;
+}
+
+:host-context(:root[data-theme="dark"]) .auth-theme-toggle:hover {
+  background: #233941;
+  border-color: #4d6872;
 }
 
 .auth-card .eyebrow {

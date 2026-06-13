@@ -1305,7 +1305,7 @@ h2 {
 
 @media (max-width: 600px) {
   .dashboard-shell {
-    width: min(100% - 1rem, 1180px);
+    width: min(100% - 1.25rem, 1180px);
     padding-top: 0.75rem;
   }
 
@@ -1314,7 +1314,7 @@ h2 {
   }
 
   .welcome {
-    padding: 2.5rem 0;
+    padding: 2rem 0;
   }
 
   .summary-grid {
@@ -1326,7 +1326,7 @@ h2 {
   }
 
   .analytics-card {
-    padding: 1.15rem;
+    padding: 1rem;
     border-radius: 18px;
   }
 

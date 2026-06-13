@@ -490,49 +490,51 @@
               <span>{{ categoryLabel(vm.analyticsFilters.category) }}</span>
             </div>
 
-            <div
-              class="spending-chart"
-              [class.daily-chart]="vm.analyticsFilters.mode === 'month'"
-              role="img"
-              [attr.aria-label]="
-                t('analytics.chartAria', {
-                  chart: vm.analytics.chartLabel,
-                  period: vm.analytics.periodLabel,
-                })
-              "
-            >
-              @for (point of vm.analytics.points; track point.label; let index = $index) {
-                <div
-                  class="chart-column"
-                  [attr.data-tooltip]="
-                    (point.amountCents / 100
-                      | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale())
-                  "
-                  [attr.aria-label]="
-                    point.label +
-                    ': ' +
-                    (point.amountCents / 100
-                      | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale())
-                  "
-                >
-                  <div class="bar-track">
-                    <span
-                      class="bar-fill"
-                      [class.has-value]="point.amountCents > 0"
-                      [style.height.%]="point.percentage"
-                    ></span>
+            <div class="chart-scroll" tabindex="0">
+              <div
+                class="spending-chart"
+                [class.daily-chart]="vm.analyticsFilters.mode === 'month'"
+                role="img"
+                [attr.aria-label]="
+                  t('analytics.chartAria', {
+                    chart: vm.analytics.chartLabel,
+                    period: vm.analytics.periodLabel,
+                  })
+                "
+              >
+                @for (point of vm.analytics.points; track point.label; let index = $index) {
+                  <div
+                    class="chart-column"
+                    [attr.data-tooltip]="
+                      (point.amountCents / 100
+                        | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale())
+                    "
+                    [attr.aria-label]="
+                      point.label +
+                      ': ' +
+                      (point.amountCents / 100
+                        | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale())
+                    "
+                  >
+                    <div class="bar-track">
+                      <span
+                        class="bar-fill"
+                        [class.has-value]="point.amountCents > 0"
+                        [style.height.%]="point.percentage"
+                      ></span>
+                    </div>
+                    <small>
+                      @if (
+                        vm.analyticsFilters.mode === 'year' ||
+                        index === 0 ||
+                        (index + 1) % 5 === 0
+                      ) {
+                        {{ point.shortLabel }}
+                      }
+                    </small>
                   </div>
-                  <small>
-                    @if (
-                      vm.analyticsFilters.mode === 'year' ||
-                      index === 0 ||
-                      (index + 1) % 5 === 0
-                    ) {
-                      {{ point.shortLabel }}
-                    }
-                  </small>
-                </div>
-              }
+                }
+              </div>
             </div>
           </article>
 
@@ -571,6 +573,7 @@
                 <div class="pie-chart-wrap">
                   <svg
                     class="category-pie-chart"
+                    [class.has-active-slice]="hoveredPieCategory() !== null"
                     role="img"
                     viewBox="0 0 200 200"
                     [attr.aria-label]="t('analytics.pieAria')"
@@ -585,8 +588,6 @@
                         [class.active]="
                           hoveredPieCategory()?.category === segment.category
                         "
-                        [style.--slice-x]="segment.offsetX + 'px'"
-                        [style.--slice-y]="segment.offsetY + 'px'"
                         (mouseenter)="setHoveredPieCategory(segment)"
                         (mouseleave)="setHoveredPieCategory(null)"
                         (focus)="setHoveredPieCategory(segment)"

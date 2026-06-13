@@ -13,6 +13,7 @@ import { firebaseErrorMessage } from '../../core/errors/firebase-error';
 import { LanguageService } from '../../core/i18n/language.service';
 import { LanguageToggleComponent } from '../../core/i18n/language-toggle.component';
 import { TranslationKey } from '../../core/i18n/translations';
+import { ThemeService } from '../../core/theme/theme.service';
 
 @Component({
   selector: 'app-auth',
@@ -27,6 +28,7 @@ export class AuthComponent {
   private readonly router = inject(Router);
   private readonly zone = inject(NgZone);
   readonly language = inject(LanguageService);
+  readonly theme = inject(ThemeService);
 
   readonly isRegistering = signal(false);
   readonly isSubmitting = signal(false);

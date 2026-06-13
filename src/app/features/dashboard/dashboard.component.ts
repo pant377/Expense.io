@@ -65,8 +65,6 @@ import { ThemeService } from '../../core/theme/theme.service';
 
 interface PieSegment extends CategoryBreakdown {
   path: string;
-  offsetX: number;
-  offsetY: number;
 }
 
 @Component({
@@ -410,12 +408,9 @@ export class DashboardComponent {
         index === categories.length - 1
           ? Math.min(startAngle + sweep, 269.999)
           : startAngle + sweep;
-      const middleAngle = startAngle + sweep / 2;
       const segment = {
         ...item,
         path: this.donutSegmentPath(startAngle, endAngle),
-        offsetX: Math.cos(this.toRadians(middleAngle)) * 7,
-        offsetY: Math.sin(this.toRadians(middleAngle)) * 7,
       };
 
       startAngle += sweep;
