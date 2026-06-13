@@ -457,14 +457,58 @@
                 <h3>{{ t('analytics.breakdown') }}</h3>
                 <p>{{ t('analytics.breakdownDescription') }}</p>
               </div>
+              <div
+                class="breakdown-view-toggle"
+                role="group"
+                [attr.aria-label]="t('analytics.breakdownView')"
+              >
+                <button
+                  type="button"
+                  [class.active]="breakdownView() === 'bars'"
+                  [attr.aria-pressed]="breakdownView() === 'bars'"
+                  (click)="updateBreakdownView('bars')"
+                >
+                  {{ t('analytics.bars') }}
+                </button>
+                <button
+                  type="button"
+                  [class.active]="breakdownView() === 'pie'"
+                  [attr.aria-pressed]="breakdownView() === 'pie'"
+                  (click)="updateBreakdownView('pie')"
+                >
+                  {{ t('analytics.pie') }}
+                </button>
+              </div>
             </div>
 
             @if (vm.analytics.categories.length) {
-              <div class="category-breakdown">
+              @if (breakdownView() === 'pie') {
+                <div class="pie-chart-wrap">
+                  <div
+                    class="category-pie-chart"
+                    role="img"
+                    [attr.aria-label]="t('analytics.pieAria')"
+                    [style.background]="categoryPieGradient(vm.analytics.categories)"
+                  >
+                    <span>
+                      <strong>{{ vm.analytics.categories.length }}</strong>
+                      {{ t('analytics.categories') }}
+                    </span>
+                  </div>
+                </div>
+              }
+
+              <div
+                class="category-breakdown"
+                [class.pie-legend]="breakdownView() === 'pie'"
+              >
                 @for (item of vm.analytics.categories; track item.category) {
                   <div class="breakdown-row">
                     <div class="breakdown-label">
-                      <span class="category-dot" [attr.data-category]="item.category"></span>
+                      <span
+                        class="category-dot"
+                        [style.background]="categoryColor(item.category)"
+                      ></span>
                       <strong>{{ categoryLabel(item.category) }}</strong>
                       <small>
                         {{ item.count }}
@@ -481,12 +525,18 @@
                         }}
                       </span>
                     </div>
-                    <div class="breakdown-track">
-                      <span
-                        [attr.data-category]="item.category"
-                        [style.width.%]="item.percentage"
-                      ></span>
-                    </div>
+                    @if (breakdownView() === 'bars') {
+                      <div class="breakdown-track">
+                        <span
+                          [style.background]="categoryColor(item.category)"
+                          [style.width.%]="item.percentage"
+                        ></span>
+                      </div>
+                    } @else {
+                      <span class="legend-percentage">
+                        {{ item.percentage | number: '1.0-1' }}%
+                      </span>
+                    }
                   </div>
                 }
               </div>

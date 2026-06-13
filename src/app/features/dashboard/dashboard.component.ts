@@ -1,4 +1,4 @@
-import { AsyncPipe, CurrencyPipe, DatePipe } from '@angular/common';
+import { AsyncPipe, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -24,6 +24,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { firebaseErrorMessage } from '../../core/errors/firebase-error';
 import {
   AnalyticsCategory,
+  CategoryBreakdown,
   AnalyticsFilters,
   AnalyticsMode,
   availableExpenseYears,
@@ -60,6 +61,7 @@ import { paginateItems } from '../../core/pagination/pagination';
     AsyncPipe,
     CurrencyPipe,
     DatePipe,
+    DecimalPipe,
     LanguageToggleComponent,
     ReactiveFormsModule,
   ],
@@ -68,6 +70,15 @@ import { paginateItems } from '../../core/pagination/pagination';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardComponent {
+  private readonly categoryColors: Record<ExpenseCategory, string> = {
+    Food: '#e0a33c',
+    Transport: '#8a67b1',
+    Home: '#4d9ac8',
+    Health: '#d76a77',
+    Leisure: '#5fa98f',
+    Subscriptions: '#b06aa5',
+    Other: '#718096',
+  };
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly authService = inject(AuthService);
   private readonly expenseService = inject(ExpenseService);
@@ -98,6 +109,7 @@ export class DashboardComponent {
     month: new Date().getMonth(),
     category: 'All',
   });
+  readonly breakdownView = signal<'bars' | 'pie'>('bars');
 
   readonly expenseForm = this.formBuilder.group({
     description: ['', [Validators.required, Validators.maxLength(120)]],
@@ -300,6 +312,26 @@ export class DashboardComponent {
       ...filters,
       category: value as AnalyticsCategory,
     }));
+  }
+
+  updateBreakdownView(view: 'bars' | 'pie'): void {
+    this.breakdownView.set(view);
+  }
+
+  categoryPieGradient(categories: CategoryBreakdown[]): string {
+    let position = 0;
+
+    const segments = categories.map((item) => {
+      const start = position;
+      position += item.percentage;
+      return `${this.categoryColor(item.category)} ${start}% ${position}%`;
+    });
+
+    return `conic-gradient(${segments.join(', ')})`;
+  }
+
+  categoryColor(category: ExpenseCategory): string {
+    return this.categoryColors[category];
   }
 
   goToExpensePage(page: number): void {
