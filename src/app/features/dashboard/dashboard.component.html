@@ -410,8 +410,17 @@
             <div>
               <p class="eyebrow">{{ t('expense.activity') }}</p>
               <h2 id="expenses-title">{{ t('expense.recent') }}</h2>
+              <small class="list-order">{{ t('expense.newestAdded') }}</small>
             </div>
-            <span class="expense-count">{{ vm.expenses.length }}</span>
+            <span
+              class="expense-count"
+              [class.filtered]="vm.hasExpenseListFilters"
+            >
+              {{ vm.expensePagination.totalItems }}
+              @if (vm.hasExpenseListFilters) {
+                <small>/ {{ vm.expenses.length }}</small>
+              }
+            </span>
           </div>
 
           @if (loadError()) {
@@ -419,6 +428,66 @@
           }
 
           @if (vm.expenses.length) {
+            <div
+              class="expense-list-filters"
+              [attr.aria-label]="t('expense.filtersAria')"
+            >
+              <label class="expense-filter-control expense-search-control">
+                <span>{{ t('expense.search') }}</span>
+                <input
+                  type="search"
+                  [value]="vm.expenseListFilters.search"
+                  [placeholder]="t('expense.searchPlaceholder')"
+                  (input)="updateExpenseSearch($any($event.target).value)"
+                >
+              </label>
+
+              <label class="expense-filter-control">
+                <span>{{ t('expense.filterCategory') }}</span>
+                <select
+                  [value]="vm.expenseListFilters.category"
+                  (change)="updateExpenseListCategory($any($event.target).value)"
+                >
+                  <option value="All">{{ categoryLabel('All') }}</option>
+                  @for (category of categories; track category) {
+                    <option [value]="category">{{ categoryLabel(category) }}</option>
+                  }
+                </select>
+              </label>
+
+              <label class="expense-filter-control">
+                <span>{{ t('expense.dateFrom') }}</span>
+                <input
+                  type="date"
+                  [value]="vm.expenseListFilters.dateFrom"
+                  [attr.max]="vm.expenseListFilters.dateTo || null"
+                  (change)="updateExpenseDateFrom($any($event.target).value)"
+                >
+              </label>
+
+              <label class="expense-filter-control">
+                <span>{{ t('expense.dateTo') }}</span>
+                <input
+                  type="date"
+                  [value]="vm.expenseListFilters.dateTo"
+                  [attr.min]="vm.expenseListFilters.dateFrom || null"
+                  (change)="updateExpenseDateTo($any($event.target).value)"
+                >
+              </label>
+
+              @if (vm.hasExpenseListFilters) {
+                <button
+                  class="clear-expense-filters"
+                  type="button"
+                  (click)="clearExpenseListFilters()"
+                >
+                  {{ t('expense.clearFilters') }}
+                </button>
+              }
+            </div>
+          }
+
+          @if (vm.expensePagination.totalItems) {
             <div class="expense-list">
               @for (expense of vm.expensePagination.items; track expense.id) {
                 <article class="expense-item">
@@ -513,6 +582,19 @@
                   </button>
                 </nav>
               }
+            </div>
+          } @else if (vm.expenses.length && !loadError()) {
+            <div class="empty-state filtered-empty-state">
+              <span aria-hidden="true">0</span>
+              <h3>{{ t('expense.noMatchesTitle') }}</h3>
+              <p>{{ t('expense.noMatchesDescription') }}</p>
+              <button
+                class="button button-secondary"
+                type="button"
+                (click)="clearExpenseListFilters()"
+              >
+                {{ t('expense.clearFilters') }}
+              </button>
             </div>
           } @else if (!loadError()) {
             <div class="empty-state">

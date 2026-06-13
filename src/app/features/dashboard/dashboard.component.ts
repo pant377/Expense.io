@@ -27,6 +27,13 @@ import {
   ExpenseCategory,
   eurosToCents,
 } from '../../core/expenses/expense.model';
+import {
+  EMPTY_EXPENSE_LIST_FILTERS,
+  ExpenseListCategory,
+  ExpenseListFilters,
+  buildExpenseList,
+  hasExpenseListFilters,
+} from '../../core/expenses/expense-list';
 import { ExpenseService } from '../../core/expenses/expense.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { LanguageToggleComponent } from '../../core/i18n/language-toggle.component';
@@ -64,6 +71,9 @@ export class DashboardComponent {
   readonly expensePendingDelete = signal<Expense | null>(null);
   readonly expensePage = signal(1);
   readonly expensePageSize = 12;
+  readonly expenseListFilters = signal<ExpenseListFilters>({
+    ...EMPTY_EXPENSE_LIST_FILTERS,
+  });
   readonly analyticsFilters = signal<AnalyticsFilters>({
     mode: 'month',
     year: new Date().getFullYear(),
@@ -109,12 +119,18 @@ export class DashboardComponent {
     this.expenseViewModel$,
     toObservable(this.analyticsFilters),
     toObservable(this.expensePage),
+    toObservable(this.expenseListFilters),
     toObservable(this.language.current),
   ]).pipe(
-    map(([viewModel, filters, expensePage, language]) => {
+    map(([viewModel, filters, expensePage, expenseListFilters, language]) => {
       if (!viewModel) {
         return null;
       }
+
+      const filteredExpenses = buildExpenseList(
+        viewModel.expenses,
+        expenseListFilters,
+      );
 
       return {
         ...viewModel,
@@ -125,8 +141,10 @@ export class DashboardComponent {
         ),
         analyticsFilters: filters,
         availableYears: availableExpenseYears(viewModel.expenses),
+        expenseListFilters,
+        hasExpenseListFilters: hasExpenseListFilters(expenseListFilters),
         expensePagination: paginateItems(
-          viewModel.expenses,
+          filteredExpenses,
           expensePage,
           this.expensePageSize,
         ),
@@ -205,6 +223,29 @@ export class DashboardComponent {
 
   goToExpensePage(page: number): void {
     this.expensePage.set(page);
+  }
+
+  updateExpenseSearch(value: string): void {
+    this.updateExpenseListFilters({ search: value });
+  }
+
+  updateExpenseListCategory(value: string): void {
+    this.updateExpenseListFilters({
+      category: value as ExpenseListCategory,
+    });
+  }
+
+  updateExpenseDateFrom(value: string): void {
+    this.updateExpenseListFilters({ dateFrom: value });
+  }
+
+  updateExpenseDateTo(value: string): void {
+    this.updateExpenseListFilters({ dateTo: value });
+  }
+
+  clearExpenseListFilters(): void {
+    this.expenseListFilters.set({ ...EMPTY_EXPENSE_LIST_FILTERS });
+    this.expensePage.set(1);
   }
 
   requestDelete(expense: Expense): void {
@@ -290,6 +331,16 @@ export class DashboardComponent {
 
       return isCurrentMonth ? total + expense.amountCents : total;
     }, 0);
+  }
+
+  private updateExpenseListFilters(
+    update: Partial<ExpenseListFilters>,
+  ): void {
+    this.expenseListFilters.update((filters) => ({
+      ...filters,
+      ...update,
+    }));
+    this.expensePage.set(1);
   }
 
   private today(): string {

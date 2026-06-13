@@ -6,8 +6,6 @@ import {
   deleteDoc,
   doc,
   onSnapshot,
-  orderBy,
-  query,
   serverTimestamp,
 } from 'firebase/firestore';
 import { Observable } from 'rxjs';
@@ -21,17 +19,16 @@ export class ExpenseService {
 
   watchExpenses(userId: string): Observable<Expense[]> {
     const expenses = collection(firestore, `users/${userId}/expenses`);
-    const orderedExpenses = query(expenses, orderBy('occurredAt', 'desc'));
 
     return new Observable<Expense[]>((subscriber) =>
       onSnapshot(
-        orderedExpenses,
+        expenses,
         (snapshot) =>
           this.zone.run(() =>
             subscriber.next(
               snapshot.docs.map((expenseDocument) => ({
                 id: expenseDocument.id,
-                ...expenseDocument.data(),
+                ...expenseDocument.data({ serverTimestamps: 'estimate' }),
               })) as Expense[],
             ),
           ),
