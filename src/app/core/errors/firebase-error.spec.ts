@@ -10,4 +10,10 @@ describe('firebaseErrorMessage', () => {
       'Something went wrong. Please try again.',
     );
   });
+
+  it('returns localized Greek errors', () => {
+    expect(firebaseErrorMessage({ code: 'auth/invalid-credential' }, 'el')).toContain(
+      'λανθασμένα',
+    );
+  });
 });

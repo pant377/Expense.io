@@ -25,7 +25,7 @@ export class AuthService {
       (error) => this.zone.run(() => subscriber.error(error)),
       () => this.zone.run(() => subscriber.complete()),
     ),
-  ).pipe(shareReplay({ bufferSize: 1, refCount: true }));
+  ).pipe(shareReplay({ bufferSize: 1, refCount: false }));
 
   get currentUser(): User | null {
     return firebaseAuth.currentUser;
@@ -50,22 +50,32 @@ export class AuthService {
 
   async loginWithGoogle(): Promise<void> {
     const credential = await signInWithPopup(firebaseAuth, new GoogleAuthProvider());
-    const profileReference = doc(firestore, `users/${credential.user.uid}`);
-    const profile = await getDoc(profileReference);
+    await credential.user.getIdToken();
 
-    await setDoc(
-      profileReference,
-      {
-        displayName: credential.user.displayName ?? 'Expense.io user',
-        email: credential.user.email ?? '',
-        ...(profile.exists() ? {} : { createdAt: serverTimestamp() }),
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true },
-    );
+    void this.syncGoogleProfile(credential.user);
   }
 
   async logout(): Promise<void> {
     await signOut(firebaseAuth);
+  }
+
+  private async syncGoogleProfile(user: User): Promise<void> {
+    try {
+      const profileReference = doc(firestore, `users/${user.uid}`);
+      const profile = await getDoc(profileReference);
+
+      await setDoc(
+        profileReference,
+        {
+          displayName: user.displayName ?? 'Expense.io user',
+          email: user.email ?? '',
+          ...(profile.exists() ? {} : { createdAt: serverTimestamp() }),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+    } catch {
+      // Profile synchronization is secondary and must not block a successful sign-in.
+    }
   }
 }

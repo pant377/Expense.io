@@ -28,11 +28,20 @@ import {
   eurosToCents,
 } from '../../core/expenses/expense.model';
 import { ExpenseService } from '../../core/expenses/expense.service';
+import { LanguageService } from '../../core/i18n/language.service';
+import { LanguageToggleComponent } from '../../core/i18n/language-toggle.component';
+import { TranslationKey } from '../../core/i18n/translations';
 import { paginateItems } from '../../core/pagination/pagination';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [AsyncPipe, CurrencyPipe, DatePipe, ReactiveFormsModule],
+  imports: [
+    AsyncPipe,
+    CurrencyPipe,
+    DatePipe,
+    LanguageToggleComponent,
+    ReactiveFormsModule,
+  ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,12 +51,10 @@ export class DashboardComponent {
   private readonly authService = inject(AuthService);
   private readonly expenseService = inject(ExpenseService);
   private readonly router = inject(Router);
+  readonly language = inject(LanguageService);
 
   readonly categories = EXPENSE_CATEGORIES;
-  readonly months = Array.from({ length: 12 }, (_, month) => ({
-    value: month,
-    label: new Intl.DateTimeFormat('en', { month: 'long' }).format(new Date(2026, month, 1)),
-  }));
+  readonly months = Array.from({ length: 12 }, (_, value) => value);
   readonly isSaving = signal(false);
   readonly isDeleting = signal(false);
   readonly actionError = signal('');
@@ -85,7 +92,7 @@ export class DashboardComponent {
           monthCents: this.currentMonthTotal(expenses),
         })),
         catchError((error: unknown) => {
-          this.loadError.set(firebaseErrorMessage(error));
+          this.loadError.set(firebaseErrorMessage(error, this.language.current()));
           return of({
             user,
             expenses: [] as Expense[],
@@ -102,15 +109,20 @@ export class DashboardComponent {
     this.expenseViewModel$,
     toObservable(this.analyticsFilters),
     toObservable(this.expensePage),
+    toObservable(this.language.current),
   ]).pipe(
-    map(([viewModel, filters, expensePage]) => {
+    map(([viewModel, filters, expensePage, language]) => {
       if (!viewModel) {
         return null;
       }
 
       return {
         ...viewModel,
-        analytics: buildExpenseAnalytics(viewModel.expenses, filters),
+        analytics: buildExpenseAnalytics(
+          viewModel.expenses,
+          filters,
+          this.language.localeFor(language),
+        ),
         analyticsFilters: filters,
         availableYears: availableExpenseYears(viewModel.expenses),
         expensePagination: paginateItems(
@@ -154,7 +166,7 @@ export class DashboardComponent {
         occurredAt: this.today(),
       });
     } catch (error: unknown) {
-      this.actionError.set(firebaseErrorMessage(error));
+      this.actionError.set(firebaseErrorMessage(error, this.language.current()));
     } finally {
       this.isSaving.set(false);
     }
@@ -222,7 +234,7 @@ export class DashboardComponent {
       await this.expenseService.deleteExpense(user.uid, expense.id);
       this.expensePendingDelete.set(null);
     } catch (error: unknown) {
-      this.deleteError.set(firebaseErrorMessage(error));
+      this.deleteError.set(firebaseErrorMessage(error, this.language.current()));
     } finally {
       this.isDeleting.set(false);
     }
@@ -235,6 +247,25 @@ export class DashboardComponent {
 
   timestampToDate(timestamp: Timestamp): Date {
     return timestamp.toDate();
+  }
+
+  t(
+    key: TranslationKey,
+    parameters: Record<string, string | number> = {},
+  ): string {
+    return this.language.t(key, parameters);
+  }
+
+  categoryLabel(category: ExpenseCategory | 'All'): string {
+    return this.language.category(category);
+  }
+
+  categoryInitial(category: ExpenseCategory): string {
+    return this.categoryLabel(category).charAt(0);
+  }
+
+  monthLabel(month: number): string {
+    return this.language.month(month);
   }
 
   @HostListener('document:click')

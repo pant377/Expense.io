@@ -2,37 +2,55 @@
   @if (viewModel$ | async; as vm) {
     @if (vm) {
       <header class="topbar">
-        <a class="brand" href="/" aria-label="Expense.io home">
+        <a class="brand" href="/" [attr.aria-label]="t('brand.home')">
           <span class="brand-mark">E</span>
           <span>Expense.io</span>
         </a>
 
         <div class="account">
           <div>
-            <strong>{{ vm.user.displayName || 'Your account' }}</strong>
+            <strong>{{ vm.user.displayName || t('dashboard.accountFallback') }}</strong>
             <span>{{ vm.user.email }}</span>
           </div>
-          <button class="logout-button" type="button" (click)="logout()">Sign out</button>
+          <app-language-toggle />
+          <button class="logout-button" type="button" (click)="logout()">
+            {{ t('dashboard.signOut') }}
+          </button>
         </div>
       </header>
 
       <section class="welcome">
         <div>
-          <p class="eyebrow">Your money overview</p>
-          <h1>Good to see you, {{ vm.user.displayName?.split(' ')?.[0] || 'there' }}.</h1>
-          <p>Capture spending as it happens and keep the full picture in sight.</p>
+          <p class="eyebrow">{{ t('dashboard.overviewEyebrow') }}</p>
+          <h1>
+            {{ t('dashboard.greeting') }},
+            {{ vm.user.displayName?.split(' ')?.[0] || t('dashboard.there') }}.
+          </h1>
+          <p>{{ t('dashboard.overviewDescription') }}</p>
         </div>
 
-        <div class="summary-grid" aria-label="Expense summary">
+        <div class="summary-grid" [attr.aria-label]="t('dashboard.summaryAria')">
           <article class="summary-card primary-summary">
-            <span>This month</span>
-            <strong>{{ vm.monthCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2' }}</strong>
-            <small>Live total from Firestore</small>
+            <span>{{ t('dashboard.thisMonth') }}</span>
+            <strong>
+              {{
+                vm.monthCents / 100
+                  | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+              }}
+            </strong>
+            <small>{{ t('dashboard.liveTotal') }}</small>
           </article>
           <article class="summary-card">
-            <span>All expenses</span>
-            <strong>{{ vm.totalCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2' }}</strong>
-            <small>{{ vm.expenses.length }} recorded transactions</small>
+            <span>{{ t('dashboard.allExpenses') }}</span>
+            <strong>
+              {{
+                vm.totalCents / 100
+                  | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+              }}
+            </strong>
+            <small>
+              {{ t('dashboard.recordedTransactions', { count: vm.expenses.length }) }}
+            </small>
           </article>
         </div>
       </section>
@@ -40,31 +58,37 @@
       <section class="analytics-card" aria-labelledby="analytics-title">
         <div class="analytics-header">
           <div>
-            <p class="eyebrow">Spending analysis</p>
-            <h2 id="analytics-title">{{ vm.analytics.periodLabel }} overview</h2>
+            <p class="eyebrow">{{ t('analytics.eyebrow') }}</p>
+            <h2 id="analytics-title">
+              {{ t('analytics.overview', { period: vm.analytics.periodLabel }) }}
+            </h2>
           </div>
 
-          <div class="period-tabs" role="group" aria-label="Analytics period">
+          <div
+            class="period-tabs"
+            role="group"
+            [attr.aria-label]="t('analytics.periodAria')"
+          >
             <button
               type="button"
               [class.active]="vm.analyticsFilters.mode === 'month'"
               (click)="updateAnalyticsMode('month')"
             >
-              Month
+              {{ t('analytics.month') }}
             </button>
             <button
               type="button"
               [class.active]="vm.analyticsFilters.mode === 'year'"
               (click)="updateAnalyticsMode('year')"
             >
-              Year
+              {{ t('analytics.year') }}
             </button>
           </div>
         </div>
 
-        <div class="analytics-filters" aria-label="Analytics filters">
+        <div class="analytics-filters" [attr.aria-label]="t('analytics.filtersAria')">
           <label class="filter-control">
-            <span>Year</span>
+            <span>{{ t('analytics.year') }}</span>
             <select
               [value]="vm.analyticsFilters.year"
               (change)="updateAnalyticsYear($any($event.target).value)"
@@ -82,17 +106,17 @@
 
           @if (vm.analyticsFilters.mode === 'month') {
             <label class="filter-control">
-              <span>Month</span>
+              <span>{{ t('analytics.month') }}</span>
               <select
                 [value]="vm.analyticsFilters.month"
                 (change)="updateAnalyticsMonth($any($event.target).value)"
               >
-                @for (month of months; track month.value) {
+                @for (month of months; track month) {
                   <option
-                    [value]="month.value"
-                    [selected]="month.value === vm.analyticsFilters.month"
+                    [value]="month"
+                    [selected]="month === vm.analyticsFilters.month"
                   >
-                    {{ month.label }}
+                    {{ monthLabel(month) }}
                   </option>
                 }
               </select>
@@ -100,7 +124,7 @@
           }
 
           <label class="filter-control category-filter">
-            <span>Category</span>
+            <span>{{ t('analytics.category') }}</span>
             <select
               [value]="vm.analyticsFilters.category"
               (change)="updateAnalyticsCategory($any($event.target).value)"
@@ -109,14 +133,14 @@
                 value="All"
                 [selected]="vm.analyticsFilters.category === 'All'"
               >
-                All categories
+                {{ t('analytics.allCategories') }}
               </option>
               @for (category of categories; track category) {
                 <option
                   [value]="category"
                   [selected]="category === vm.analyticsFilters.category"
                 >
-                  {{ category }}
+                  {{ categoryLabel(category) }}
                 </option>
               }
             </select>
@@ -125,38 +149,57 @@
 
         <div class="analytics-stats">
           <article>
-            <span>Total spent</span>
+            <span>{{ t('analytics.totalSpent') }}</span>
             <strong>
-              {{ vm.analytics.totalCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2' }}
+              {{
+                vm.analytics.totalCents / 100
+                  | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+              }}
             </strong>
             @if (vm.analytics.changePercent === null) {
-              <small>No previous-period spending</small>
+              <small>{{ t('analytics.noPrevious') }}</small>
             } @else {
               <small
                 [class.change-up]="vm.analytics.changePercent > 0"
                 [class.change-down]="vm.analytics.changePercent < 0"
               >
                 {{ vm.analytics.changePercent > 0 ? '+' : '' }}{{ vm.analytics.changePercent }}%
-                vs previous {{ vm.analyticsFilters.mode }}
+                {{
+                  t('analytics.vsPrevious', {
+                    period:
+                      vm.analyticsFilters.mode === 'month'
+                        ? t('analytics.previousMonth')
+                        : t('analytics.previousYear'),
+                  })
+                }}
               </small>
             }
           </article>
           <article>
-            <span>Transactions</span>
+            <span>{{ t('analytics.transactions') }}</span>
             <strong>{{ vm.analytics.count }}</strong>
-            <small>In the selected period</small>
+            <small>{{ t('analytics.selectedPeriod') }}</small>
           </article>
           <article>
-            <span>Average expense</span>
+            <span>{{ t('analytics.average') }}</span>
             <strong>
-              {{ vm.analytics.averageCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2' }}
+              {{
+                vm.analytics.averageCents / 100
+                  | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+              }}
             </strong>
-            <small>Per transaction</small>
+            <small>{{ t('analytics.perTransaction') }}</small>
           </article>
           <article>
-            <span>Top category</span>
-            <strong class="top-category">{{ vm.analytics.topCategory || 'No data' }}</strong>
-            <small>By total amount</small>
+            <span>{{ t('analytics.topCategory') }}</span>
+            <strong class="top-category">
+              {{
+                vm.analytics.topCategory
+                  ? categoryLabel(vm.analytics.topCategory)
+                  : t('analytics.noData')
+              }}
+            </strong>
+            <small>{{ t('analytics.byTotal') }}</small>
           </article>
         </div>
 
@@ -165,27 +208,34 @@
             <div class="panel-heading">
               <div>
                 <h3>{{ vm.analytics.chartLabel }}</h3>
-                <p>Hover over a bar for the exact amount.</p>
+                <p>{{ t('analytics.chartHint') }}</p>
               </div>
-              <span>{{ vm.analyticsFilters.category }}</span>
+              <span>{{ categoryLabel(vm.analyticsFilters.category) }}</span>
             </div>
 
             <div
               class="spending-chart"
               [class.daily-chart]="vm.analyticsFilters.mode === 'month'"
               role="img"
-              [attr.aria-label]="vm.analytics.chartLabel + ' for ' + vm.analytics.periodLabel"
+              [attr.aria-label]="
+                t('analytics.chartAria', {
+                  chart: vm.analytics.chartLabel,
+                  period: vm.analytics.periodLabel,
+                })
+              "
             >
               @for (point of vm.analytics.points; track point.label; let index = $index) {
                 <div
                   class="chart-column"
                   [attr.data-tooltip]="
-                    (point.amountCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2')
+                    (point.amountCents / 100
+                      | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale())
                   "
                   [attr.aria-label]="
                     point.label +
                     ': ' +
-                    (point.amountCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2')
+                    (point.amountCents / 100
+                      | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale())
                   "
                 >
                   <div class="bar-track">
@@ -212,8 +262,8 @@
           <article class="breakdown-panel">
             <div class="panel-heading">
               <div>
-                <h3>Category breakdown</h3>
-                <p>Share of selected-period spending.</p>
+                <h3>{{ t('analytics.breakdown') }}</h3>
+                <p>{{ t('analytics.breakdownDescription') }}</p>
               </div>
             </div>
 
@@ -223,10 +273,20 @@
                   <div class="breakdown-row">
                     <div class="breakdown-label">
                       <span class="category-dot" [attr.data-category]="item.category"></span>
-                      <strong>{{ item.category }}</strong>
-                      <small>{{ item.count }} {{ item.count === 1 ? 'expense' : 'expenses' }}</small>
+                      <strong>{{ categoryLabel(item.category) }}</strong>
+                      <small>
+                        {{ item.count }}
+                        {{
+                          item.count === 1
+                            ? t('analytics.expense')
+                            : t('analytics.expenses')
+                        }}
+                      </small>
                       <span>
-                        {{ item.amountCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2' }}
+                        {{
+                          item.amountCents / 100
+                            | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                        }}
                       </span>
                     </div>
                     <div class="breakdown-track">
@@ -241,8 +301,8 @@
             } @else {
               <div class="analytics-empty">
                 <span aria-hidden="true">%</span>
-                <strong>No data for these filters</strong>
-                <p>Try another period or category.</p>
+                <strong>{{ t('analytics.emptyTitle') }}</strong>
+                <p>{{ t('analytics.emptyDescription') }}</p>
               </div>
             }
           </article>
@@ -252,25 +312,25 @@
       <section class="workspace">
         <aside class="expense-form-card">
           <div>
-            <p class="eyebrow">New transaction</p>
-            <h2>Add an expense</h2>
+            <p class="eyebrow">{{ t('expense.newEyebrow') }}</p>
+            <h2>{{ t('expense.addTitle') }}</h2>
           </div>
 
           <form [formGroup]="expenseForm" (ngSubmit)="addExpense()">
             <div class="field">
-              <label for="description">Description</label>
+              <label for="description">{{ t('expense.description') }}</label>
               <input
                 id="description"
                 type="text"
                 formControlName="description"
-                placeholder="Weekly groceries"
+                [placeholder]="t('expense.descriptionPlaceholder')"
                 autocomplete="off"
               >
             </div>
 
             <div class="form-row">
               <div class="field">
-                <label for="amount">Amount</label>
+                <label for="amount">{{ t('expense.amount') }}</label>
                 <div class="amount-input">
                   <span aria-hidden="true">&euro;</span>
                   <input
@@ -285,13 +345,13 @@
               </div>
 
               <div class="field">
-                <label for="date">Date</label>
+                <label for="date">{{ t('expense.date') }}</label>
                 <input id="date" type="date" formControlName="occurredAt">
               </div>
             </div>
 
             <div class="field category-field" (click)="$event.stopPropagation()">
-              <label id="category-label">Category</label>
+              <label id="category-label">{{ t('expense.category') }}</label>
               <button
                 class="category-select"
                 type="button"
@@ -304,9 +364,11 @@
                   class="category-choice-icon"
                   [attr.data-category]="expenseForm.controls.category.value"
                 >
-                  {{ expenseForm.controls.category.value.charAt(0) }}
+                  {{ categoryInitial(expenseForm.controls.category.value) }}
                 </span>
-                <span id="selected-category">{{ expenseForm.controls.category.value }}</span>
+                <span id="selected-category">
+                  {{ categoryLabel(expenseForm.controls.category.value) }}
+                </span>
                 <span class="select-chevron" aria-hidden="true"></span>
               </button>
 
@@ -321,11 +383,11 @@
                       (click)="selectCategory(category, $event)"
                     >
                       <span class="category-choice-icon" [attr.data-category]="category">
-                        {{ category.charAt(0) }}
+                        {{ categoryInitial(category) }}
                       </span>
-                      <span>{{ category }}</span>
+                      <span>{{ categoryLabel(category) }}</span>
                       @if (expenseForm.controls.category.value === category) {
-                        <span class="selected-check" aria-hidden="true">✓</span>
+                        <span class="selected-check" aria-hidden="true">&#10003;</span>
                       }
                     </button>
                   }
@@ -338,7 +400,7 @@
             }
 
             <button class="button button-primary add-button" type="submit" [disabled]="isSaving()">
-              {{ isSaving() ? 'Saving...' : 'Add expense' }}
+              {{ isSaving() ? t('expense.saving') : t('expense.add') }}
             </button>
           </form>
         </aside>
@@ -346,8 +408,8 @@
         <section class="expense-list-card" aria-labelledby="expenses-title">
           <div class="list-header">
             <div>
-              <p class="eyebrow">Activity</p>
-              <h2 id="expenses-title">Recent expenses</h2>
+              <p class="eyebrow">{{ t('expense.activity') }}</p>
+              <h2 id="expenses-title">{{ t('expense.recent') }}</h2>
             </div>
             <span class="expense-count">{{ vm.expenses.length }}</span>
           </div>
@@ -361,22 +423,30 @@
               @for (expense of vm.expensePagination.items; track expense.id) {
                 <article class="expense-item">
                   <div class="category-icon" [attr.data-category]="expense.category">
-                    {{ expense.category.charAt(0) }}
+                    {{ categoryInitial(expense.category) }}
                   </div>
                   <div class="expense-copy">
                     <strong>{{ expense.description }}</strong>
                     <span>
-                      {{ expense.category }} &middot;
-                      {{ timestampToDate(expense.occurredAt) | date: 'd MMM y' }}
+                      {{ categoryLabel(expense.category) }} &middot;
+                      {{
+                        timestampToDate(expense.occurredAt)
+                          | date: 'd MMM y' : undefined : language.locale()
+                      }}
                     </span>
                   </div>
                   <strong class="expense-amount">
-                    {{ expense.amountCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2' }}
+                    {{
+                      expense.amountCents / 100
+                        | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                    }}
                   </strong>
                   <button
                     class="delete-button"
                     type="button"
-                    [attr.aria-label]="'Delete ' + expense.description"
+                    [attr.aria-label]="
+                      t('expense.deleteAria', { description: expense.description })
+                    "
                     (click)="requestDelete(expense)"
                   >
                     <span aria-hidden="true">&times;</span>
@@ -387,19 +457,22 @@
 
             <div class="expense-pagination">
               <p>
-                Showing
+                {{ t('expense.showing') }}
                 <strong>
                   {{ vm.expensePagination.startItem }}-{{ vm.expensePagination.endItem }}
                 </strong>
-                of {{ vm.expensePagination.totalItems }}
+                {{ t('expense.of') }} {{ vm.expensePagination.totalItems }}
               </p>
 
               @if (vm.expensePagination.totalPages > 1) {
-                <nav class="pagination-controls" aria-label="Expense list pages">
+                <nav
+                  class="pagination-controls"
+                  [attr.aria-label]="t('expense.pagesAria')"
+                >
                   <button
                     class="pagination-button pagination-arrow"
                     type="button"
-                    aria-label="Previous expense page"
+                    [attr.aria-label]="t('expense.previousPage')"
                     [disabled]="vm.expensePagination.currentPage === 1"
                     (click)="goToExpensePage(vm.expensePagination.currentPage - 1)"
                   >
@@ -415,7 +488,7 @@
                         [attr.aria-current]="
                           control.page === vm.expensePagination.currentPage ? 'page' : null
                         "
-                        [attr.aria-label]="'Go to expense page ' + control.page"
+                        [attr.aria-label]="t('expense.goToPage', { page: control.page })"
                         (click)="goToExpensePage(control.page)"
                       >
                         {{ control.label }}
@@ -430,7 +503,7 @@
                   <button
                     class="pagination-button pagination-arrow"
                     type="button"
-                    aria-label="Next expense page"
+                    [attr.aria-label]="t('expense.nextPage')"
                     [disabled]="
                       vm.expensePagination.currentPage === vm.expensePagination.totalPages
                     "
@@ -444,8 +517,8 @@
           } @else if (!loadError()) {
             <div class="empty-state">
               <span aria-hidden="true">&euro;</span>
-              <h3>No expenses yet</h3>
-              <p>Add your first transaction and your overview will appear here.</p>
+              <h3>{{ t('expense.emptyTitle') }}</h3>
+              <p>{{ t('expense.emptyDescription') }}</p>
             </div>
           }
         </section>
@@ -454,7 +527,7 @@
   } @else {
     <div class="loading-state" aria-live="polite">
       <span></span>
-      <p>Loading your expenses...</p>
+      <p>{{ t('expense.loading') }}</p>
     </div>
   }
 </main>
@@ -471,27 +544,35 @@
     >
       <div class="delete-modal-icon" aria-hidden="true">!</div>
       <div class="delete-modal-copy">
-        <p class="eyebrow">Delete expense</p>
-        <h2 id="delete-title">Remove this transaction?</h2>
+        <p class="eyebrow">{{ t('delete.eyebrow') }}</p>
+        <h2 id="delete-title">{{ t('delete.title') }}</h2>
         <p id="delete-description">
-          This will permanently delete
+          {{ t('delete.descriptionBefore') }}
           <strong>{{ expense.description }}</strong>
-          from your expense history.
+          {{ t('delete.descriptionAfter') }}
         </p>
       </div>
 
       <div class="delete-preview">
         <div>
           <span class="category-choice-icon" [attr.data-category]="expense.category">
-            {{ expense.category.charAt(0) }}
+            {{ categoryInitial(expense.category) }}
           </span>
           <div>
-            <strong>{{ expense.category }}</strong>
-            <span>{{ timestampToDate(expense.occurredAt) | date: 'd MMMM y' }}</span>
+            <strong>{{ categoryLabel(expense.category) }}</strong>
+            <span>
+              {{
+                timestampToDate(expense.occurredAt)
+                  | date: 'd MMMM y' : undefined : language.locale()
+              }}
+            </span>
           </div>
         </div>
         <strong>
-          {{ expense.amountCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2' }}
+          {{
+            expense.amountCents / 100
+              | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+          }}
         </strong>
       </div>
 
@@ -506,7 +587,7 @@
           [disabled]="isDeleting()"
           (click)="cancelDelete()"
         >
-          Keep expense
+          {{ t('delete.keep') }}
         </button>
         <button
           class="button confirm-delete-button"
@@ -514,7 +595,7 @@
           [disabled]="isDeleting()"
           (click)="confirmDelete()"
         >
-          {{ isDeleting() ? 'Deleting...' : 'Delete expense' }}
+          {{ isDeleting() ? t('delete.deleting') : t('delete.confirm') }}
         </button>
       </div>
     </section>

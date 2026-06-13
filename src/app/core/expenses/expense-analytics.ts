@@ -1,4 +1,5 @@
 import { Expense, ExpenseCategory } from './expense.model';
+import { formatMonthName } from '../i18n/date-labels';
 
 export type AnalyticsMode = 'month' | 'year';
 export type AnalyticsCategory = ExpenseCategory | 'All';
@@ -37,9 +38,6 @@ export interface ExpenseAnalytics {
   categories: CategoryBreakdown[];
 }
 
-const MONTH_FORMATTER = new Intl.DateTimeFormat('en', { month: 'long' });
-const SHORT_MONTH_FORMATTER = new Intl.DateTimeFormat('en', { month: 'short' });
-
 export function availableExpenseYears(expenses: Expense[], currentYear = new Date().getFullYear()): number[] {
   const years = new Set<number>([currentYear]);
 
@@ -51,6 +49,7 @@ export function availableExpenseYears(expenses: Expense[], currentYear = new Dat
 export function buildExpenseAnalytics(
   expenses: Expense[],
   filters: AnalyticsFilters,
+  locale = 'en-GB',
 ): ExpenseAnalytics {
   const periodExpenses = filterForPeriod(expenses, filters);
   const previousExpenses = filterForPeriod(expenses, previousPeriod(filters));
@@ -61,9 +60,16 @@ export function buildExpenseAnalytics(
   return {
     periodLabel:
       filters.mode === 'month'
-        ? `${MONTH_FORMATTER.format(new Date(filters.year, filters.month, 1))} ${filters.year}`
+        ? `${formatMonthName(locale, filters.month)} ${filters.year}`
         : String(filters.year),
-    chartLabel: filters.mode === 'month' ? 'Daily spending' : 'Monthly spending',
+    chartLabel:
+      locale === 'el-GR'
+        ? filters.mode === 'month'
+          ? 'Ημερήσια έξοδα'
+          : 'Μηνιαία έξοδα'
+        : filters.mode === 'month'
+          ? 'Daily spending'
+          : 'Monthly spending',
     totalCents,
     previousTotalCents,
     changePercent: calculateChange(totalCents, previousTotalCents),
@@ -72,8 +78,8 @@ export function buildExpenseAnalytics(
     topCategory: categories[0]?.category ?? null,
     points:
       filters.mode === 'month'
-        ? buildDailyPoints(periodExpenses, filters.year, filters.month)
-        : buildMonthlyPoints(periodExpenses, filters.year),
+        ? buildDailyPoints(periodExpenses, filters.year, filters.month, locale)
+        : buildMonthlyPoints(periodExpenses, filters.year, locale),
     categories,
   };
 }
@@ -104,7 +110,12 @@ function previousPeriod(filters: AnalyticsFilters): AnalyticsFilters {
   };
 }
 
-function buildDailyPoints(expenses: Expense[], year: number, month: number): AnalyticsPoint[] {
+function buildDailyPoints(
+  expenses: Expense[],
+  year: number,
+  month: number,
+  locale: string,
+): AnalyticsPoint[] {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const totals = new Array<number>(daysInMonth).fill(0);
 
@@ -115,14 +126,20 @@ function buildDailyPoints(expenses: Expense[], year: number, month: number): Ana
 
   return normalizePoints(
     totals.map((amountCents, index) => ({
-      label: `${MONTH_FORMATTER.format(new Date(year, month, 1))} ${index + 1}`,
+      label: locale.startsWith('el')
+        ? `${index + 1} ${formatMonthName(locale, month, 'long', 'date')}`
+        : `${formatMonthName(locale, month)} ${index + 1}`,
       shortLabel: String(index + 1),
       amountCents,
     })),
   );
 }
 
-function buildMonthlyPoints(expenses: Expense[], year: number): AnalyticsPoint[] {
+function buildMonthlyPoints(
+  expenses: Expense[],
+  year: number,
+  locale: string,
+): AnalyticsPoint[] {
   const totals = new Array<number>(12).fill(0);
 
   expenses.forEach((expense) => {
@@ -131,8 +148,8 @@ function buildMonthlyPoints(expenses: Expense[], year: number): AnalyticsPoint[]
 
   return normalizePoints(
     totals.map((amountCents, month) => ({
-      label: `${MONTH_FORMATTER.format(new Date(year, month, 1))} ${year}`,
-      shortLabel: SHORT_MONTH_FORMATTER.format(new Date(year, month, 1)),
+      label: `${formatMonthName(locale, month)} ${year}`,
+      shortLabel: formatMonthName(locale, month, 'short'),
       amountCents,
     })),
   );

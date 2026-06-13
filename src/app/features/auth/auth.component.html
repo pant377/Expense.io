@@ -1,38 +1,35 @@
 <main class="auth-shell">
   <section class="auth-intro" aria-labelledby="auth-title">
-    <a class="brand" href="/" aria-label="Expense.io home">
+    <a class="brand" href="/" [attr.aria-label]="t('brand.home')">
       <span class="brand-mark">E</span>
       <span>Expense.io</span>
     </a>
 
     <div class="intro-copy">
-      <p class="eyebrow">Personal finance, without the noise</p>
-      <h1 id="auth-title">Know where your money goes.</h1>
-      <p>
-        A focused expense tracker with private accounts, instant sync and a clear view of
-        your spending.
-      </p>
+      <p class="eyebrow">{{ t('auth.introEyebrow') }}</p>
+      <h1 id="auth-title">{{ t('auth.introTitle') }}</h1>
+      <p>{{ t('auth.introDescription') }}</p>
     </div>
 
     <div class="privacy-note">
-      <span class="privacy-icon" aria-hidden="true">✓</span>
+      <span class="privacy-icon" aria-hidden="true">&#10003;</span>
       <div>
-        <strong>Your data stays yours</strong>
-        <span>Every expense is protected by your Firebase account.</span>
+        <strong>{{ t('auth.privacyTitle') }}</strong>
+        <span>{{ t('auth.privacyDescription') }}</span>
       </div>
     </div>
   </section>
 
-  <section class="auth-card" aria-label="Account access">
+  <section class="auth-card" [attr.aria-label]="t('auth.accountAccess')">
+    <app-language-toggle class="auth-language-toggle" />
+
     <div>
-      <p class="eyebrow">{{ isRegistering() ? 'Create your account' : 'Welcome back' }}</p>
-      <h2>{{ isRegistering() ? 'Start tracking smarter' : 'Sign in to continue' }}</h2>
+      <p class="eyebrow">
+        {{ isRegistering() ? t('auth.createEyebrow') : t('auth.welcomeEyebrow') }}
+      </p>
+      <h2>{{ isRegistering() ? t('auth.createTitle') : t('auth.signInTitle') }}</h2>
       <p class="card-subtitle">
-        {{
-          isRegistering()
-            ? 'Set up your private workspace in under a minute.'
-            : 'Your latest expenses are waiting for you.'
-        }}
+        {{ isRegistering() ? t('auth.createSubtitle') : t('auth.signInSubtitle') }}
       </p>
     </div>
 
@@ -43,53 +40,53 @@
       (click)="signInWithGoogle()"
     >
       <span class="google-mark" aria-hidden="true">G</span>
-      Continue with Google
+      {{ t('auth.google') }}
     </button>
 
-    <div class="divider"><span>or use email</span></div>
+    <div class="divider"><span>{{ t('auth.emailDivider') }}</span></div>
 
     <form [formGroup]="form" (ngSubmit)="submit()">
       @if (isRegistering()) {
         <div class="field">
-          <label for="display-name">Name</label>
+          <label for="display-name">{{ t('auth.name') }}</label>
           <input
             id="display-name"
             type="text"
             formControlName="displayName"
             autocomplete="name"
-            placeholder="Alex Morgan"
+            [placeholder]="t('auth.namePlaceholder')"
           >
           @if (form.controls.displayName.touched && form.controls.displayName.invalid) {
-            <small>Please enter your name.</small>
+            <small>{{ t('auth.nameError') }}</small>
           }
         </div>
       }
 
       <div class="field">
-        <label for="email">Email</label>
+        <label for="email">{{ t('auth.email') }}</label>
         <input
           id="email"
           type="email"
           formControlName="email"
           autocomplete="email"
-          placeholder="you@example.com"
+          [placeholder]="t('auth.emailPlaceholder')"
         >
         @if (form.controls.email.touched && form.controls.email.invalid) {
-          <small>Enter a valid email address.</small>
+          <small>{{ t('auth.emailError') }}</small>
         }
       </div>
 
       <div class="field">
-        <label for="password">Password</label>
+        <label for="password">{{ t('auth.password') }}</label>
         <input
           id="password"
           type="password"
           formControlName="password"
           [autocomplete]="isRegistering() ? 'new-password' : 'current-password'"
-          placeholder="At least 6 characters"
+          [placeholder]="t('auth.passwordPlaceholder')"
         >
         @if (form.controls.password.touched && form.controls.password.invalid) {
-          <small>Password must contain at least 6 characters.</small>
+          <small>{{ t('auth.passwordError') }}</small>
         }
       </div>
 
@@ -100,18 +97,18 @@
       <button class="button button-primary submit-button" type="submit" [disabled]="isSubmitting()">
         {{
           isSubmitting()
-            ? 'Please wait...'
+            ? t('auth.wait')
             : isRegistering()
-              ? 'Create account'
-              : 'Sign in'
+              ? t('auth.createAccount')
+              : t('auth.signIn')
         }}
       </button>
     </form>
 
     <p class="mode-switch">
-      {{ isRegistering() ? 'Already have an account?' : 'New to Expense.io?' }}
+      {{ isRegistering() ? t('auth.alreadyRegistered') : t('auth.newUser') }}
       <button type="button" (click)="toggleMode()">
-        {{ isRegistering() ? 'Sign in' : 'Create one' }}
+        {{ isRegistering() ? t('auth.signIn') : t('auth.createOne') }}
       </button>
     </p>
   </section>

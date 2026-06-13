@@ -64,4 +64,20 @@ describe('expense analytics', () => {
   it('returns sorted available years including the current year', () => {
     expect(availableExpenseYears(expenses, 2026)).toEqual([2026, 2025]);
   });
+
+  it('localizes analytics labels in Greek', () => {
+    const analytics = buildExpenseAnalytics(
+      expenses,
+      {
+        mode: 'month',
+        year: 2026,
+        month: 5,
+        category: 'All',
+      },
+      'el-GR',
+    );
+
+    expect(analytics.periodLabel).toContain('Ιούνιος');
+    expect(analytics.chartLabel).toBe('Ημερήσια έξοδα');
+  });
 });

@@ -111,10 +111,17 @@
 }
 
 .auth-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
   padding: clamp(2rem, 5vw, 4.5rem);
+}
+
+.auth-language-toggle {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
 }
 
 .auth-card .eyebrow {

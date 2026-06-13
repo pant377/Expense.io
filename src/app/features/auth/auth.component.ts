@@ -1,13 +1,22 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  NgZone,
+  inject,
+  signal,
+} from '@angular/core';
 import { ReactiveFormsModule, Validators, NonNullableFormBuilder } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { firebaseErrorMessage } from '../../core/errors/firebase-error';
+import { LanguageService } from '../../core/i18n/language.service';
+import { LanguageToggleComponent } from '../../core/i18n/language-toggle.component';
+import { TranslationKey } from '../../core/i18n/translations';
 
 @Component({
   selector: 'app-auth',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, LanguageToggleComponent],
   templateUrl: './auth.component.html',
   styleUrl: './auth.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -16,6 +25,8 @@ export class AuthComponent {
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly zone = inject(NgZone);
+  readonly language = inject(LanguageService);
 
   readonly isRegistering = signal(false);
   readonly isSubmitting = signal(false);
@@ -55,9 +66,9 @@ export class AuthComponent {
         await this.authService.login(email.trim(), password);
       }
 
-      await this.router.navigateByUrl('/');
+      await this.navigateToDashboard();
     } catch (error: unknown) {
-      this.errorMessage.set(firebaseErrorMessage(error));
+      this.errorMessage.set(firebaseErrorMessage(error, this.language.current()));
     } finally {
       this.isSubmitting.set(false);
     }
@@ -69,11 +80,22 @@ export class AuthComponent {
 
     try {
       await this.authService.loginWithGoogle();
-      await this.router.navigateByUrl('/');
+      await this.navigateToDashboard();
     } catch (error: unknown) {
-      this.errorMessage.set(firebaseErrorMessage(error));
+      this.errorMessage.set(firebaseErrorMessage(error, this.language.current()));
     } finally {
       this.isSubmitting.set(false);
     }
+  }
+
+  t(
+    key: TranslationKey,
+    parameters: Record<string, string | number> = {},
+  ): string {
+    return this.language.t(key, parameters);
+  }
+
+  private navigateToDashboard(): Promise<boolean> {
+    return this.zone.run(() => this.router.navigateByUrl('/'));
   }
 }
