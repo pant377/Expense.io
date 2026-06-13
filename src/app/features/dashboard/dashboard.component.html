@@ -358,7 +358,7 @@
 
           @if (vm.expenses.length) {
             <div class="expense-list">
-              @for (expense of vm.expenses; track expense.id) {
+              @for (expense of vm.expensePagination.items; track expense.id) {
                 <article class="expense-item">
                   <div class="category-icon" [attr.data-category]="expense.category">
                     {{ expense.category.charAt(0) }}
@@ -382,6 +382,63 @@
                     <span aria-hidden="true">&times;</span>
                   </button>
                 </article>
+              }
+            </div>
+
+            <div class="expense-pagination">
+              <p>
+                Showing
+                <strong>
+                  {{ vm.expensePagination.startItem }}-{{ vm.expensePagination.endItem }}
+                </strong>
+                of {{ vm.expensePagination.totalItems }}
+              </p>
+
+              @if (vm.expensePagination.totalPages > 1) {
+                <nav class="pagination-controls" aria-label="Expense list pages">
+                  <button
+                    class="pagination-button pagination-arrow"
+                    type="button"
+                    aria-label="Previous expense page"
+                    [disabled]="vm.expensePagination.currentPage === 1"
+                    (click)="goToExpensePage(vm.expensePagination.currentPage - 1)"
+                  >
+                    <span aria-hidden="true">&lsaquo;</span>
+                  </button>
+
+                  @for (control of vm.expensePagination.controls; track control.key) {
+                    @if (control.page !== null) {
+                      <button
+                        class="pagination-button"
+                        type="button"
+                        [class.active]="control.page === vm.expensePagination.currentPage"
+                        [attr.aria-current]="
+                          control.page === vm.expensePagination.currentPage ? 'page' : null
+                        "
+                        [attr.aria-label]="'Go to expense page ' + control.page"
+                        (click)="goToExpensePage(control.page)"
+                      >
+                        {{ control.label }}
+                      </button>
+                    } @else {
+                      <span class="pagination-ellipsis" aria-hidden="true">
+                        {{ control.label }}
+                      </span>
+                    }
+                  }
+
+                  <button
+                    class="pagination-button pagination-arrow"
+                    type="button"
+                    aria-label="Next expense page"
+                    [disabled]="
+                      vm.expensePagination.currentPage === vm.expensePagination.totalPages
+                    "
+                    (click)="goToExpensePage(vm.expensePagination.currentPage + 1)"
+                  >
+                    <span aria-hidden="true">&rsaquo;</span>
+                  </button>
+                </nav>
               }
             </div>
           } @else if (!loadError()) {

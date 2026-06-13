@@ -692,6 +692,75 @@ h2 {
   display: grid;
 }
 
+.expense-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1rem;
+  margin-top: 0.25rem;
+  border-top: 1px solid #edf1f3;
+}
+
+.expense-pagination p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.expense-pagination p strong {
+  color: var(--ink);
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.pagination-button,
+.pagination-ellipsis {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 9px;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.pagination-button {
+  color: var(--muted);
+  background: white;
+  border: 1px solid #dce4e7;
+}
+
+.pagination-button:hover:not(:disabled):not(.active) {
+  color: var(--primary-dark);
+  background: #f1f6f5;
+  border-color: #bfd4d1;
+}
+
+.pagination-button.active {
+  color: white;
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.pagination-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.pagination-arrow {
+  font-size: 1.15rem;
+}
+
+.pagination-ellipsis {
+  color: var(--muted);
+}
+
 .expense-item {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
@@ -1023,6 +1092,22 @@ h2 {
 
   .expense-item {
     grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .expense-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pagination-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .pagination-button,
+  .pagination-ellipsis {
+    width: 30px;
+    height: 30px;
   }
 
   .expense-amount {

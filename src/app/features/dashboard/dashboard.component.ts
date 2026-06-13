@@ -28,6 +28,7 @@ import {
   eurosToCents,
 } from '../../core/expenses/expense.model';
 import { ExpenseService } from '../../core/expenses/expense.service';
+import { paginateItems } from '../../core/pagination/pagination';
 
 @Component({
   selector: 'app-dashboard',
@@ -54,6 +55,8 @@ export class DashboardComponent {
   readonly loadError = signal('');
   readonly categoryMenuOpen = signal(false);
   readonly expensePendingDelete = signal<Expense | null>(null);
+  readonly expensePage = signal(1);
+  readonly expensePageSize = 12;
   readonly analyticsFilters = signal<AnalyticsFilters>({
     mode: 'month',
     year: new Date().getFullYear(),
@@ -98,8 +101,9 @@ export class DashboardComponent {
   readonly viewModel$ = combineLatest([
     this.expenseViewModel$,
     toObservable(this.analyticsFilters),
+    toObservable(this.expensePage),
   ]).pipe(
-    map(([viewModel, filters]) => {
+    map(([viewModel, filters, expensePage]) => {
       if (!viewModel) {
         return null;
       }
@@ -109,6 +113,11 @@ export class DashboardComponent {
         analytics: buildExpenseAnalytics(viewModel.expenses, filters),
         analyticsFilters: filters,
         availableYears: availableExpenseYears(viewModel.expenses),
+        expensePagination: paginateItems(
+          viewModel.expenses,
+          expensePage,
+          this.expensePageSize,
+        ),
       };
     }),
     shareReplay({ bufferSize: 1, refCount: true }),
@@ -137,6 +146,7 @@ export class DashboardComponent {
         category,
         occurredAt: this.expenseService.dateToTimestamp(occurredAt),
       });
+      this.expensePage.set(1);
       this.expenseForm.reset({
         description: '',
         amount: null,
@@ -179,6 +189,10 @@ export class DashboardComponent {
       ...filters,
       category: value as AnalyticsCategory,
     }));
+  }
+
+  goToExpensePage(page: number): void {
+    this.expensePage.set(page);
   }
 
   requestDelete(expense: Expense): void {
