@@ -53,7 +53,8 @@ In another terminal, start Angular:
 npm run start:emulators
 ```
 
-The emulator and test commands use a generated demo configuration and do not require `.env`.
+The emulator and test commands use the fixed safe demo configuration in
+`environment.emulator.ts` and do not require `.env`.
 
 The application runs at `http://localhost:4200` and the Emulator Suite UI runs at
 `http://localhost:4000`.

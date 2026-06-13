@@ -4,21 +4,18 @@
   "scripts": {
     "ng": "ng",
     "firebase:config": "node scripts/generate-firebase-config.mjs",
-    "firebase:config:demo": "node scripts/generate-firebase-config.mjs --demo",
     "prestart": "npm run firebase:config",
     "start": "ng serve",
-    "prestart:emulators": "npm run firebase:config:demo",
     "start:emulators": "ng serve --configuration emulator",
     "prebuild": "npm run firebase:config",
     "build": "ng build",
-    "prebuild:emulators": "npm run firebase:config:demo",
     "build:emulators": "ng build --configuration emulator",
     "prewatch": "npm run firebase:config",
     "watch": "ng build --watch --configuration development",
-    "pretest": "npm run firebase:config:demo",
     "test": "ng test --watch=false",
+    "verify:production-build": "node scripts/verify-production-build.mjs",
     "firebase:emulators": "firebase emulators:start --project demo-expense-io",
-    "firebase:deploy": "npm run build && firebase deploy"
+    "firebase:deploy": "npm run build && npm run verify:production-build && firebase deploy"
   },
   "private": true,
   "dependencies": {

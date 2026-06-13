@@ -63,6 +63,7 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
+              "outputPath": "dist/expense-io-emulator",
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",
@@ -103,6 +104,12 @@
               "src/favicon.ico",
               "src/favicon.png",
               "src/favicon.svg"
+            ],
+            "fileReplacements": [
+              {
+                "replace": "src/environments/environment.ts",
+                "with": "src/environments/environment.emulator.ts"
+              }
             ],
             "styles": [
               "src/styles.css"
