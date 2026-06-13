@@ -1,14 +1,16 @@
 :host {
-  display: block;
-  min-height: 100vh;
+  display: grid;
+  min-height: 100dvh;
+  padding: 2rem 1rem;
+  place-items: stretch center;
 }
 
 .auth-shell {
   display: grid;
-  width: min(1120px, calc(100% - 2rem));
-  min-height: calc(100vh - 4rem);
+  width: min(1120px, 100%);
+  min-height: calc(100dvh - 4rem);
   grid-template-columns: 1.12fr 0.88fr;
-  margin: 2rem auto;
+  margin: 0;
   overflow: hidden;
   background: var(--surface);
   border: 1px solid rgba(17, 36, 58, 0.08);
@@ -18,9 +20,9 @@
 
 .auth-intro {
   display: flex;
-  min-height: 680px;
+  min-height: 0;
   flex-direction: column;
-  padding: clamp(2rem, 5vw, 4.5rem);
+  padding: clamp(2rem, 5dvh, 4.5rem) clamp(2rem, 5vw, 4.5rem);
   color: white;
   background:
     linear-gradient(145deg, rgba(5, 72, 68, 0.96), rgba(9, 120, 112, 0.9)),
@@ -115,7 +117,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: clamp(2rem, 5vw, 4.5rem);
+  padding: clamp(2rem, 5dvh, 4.5rem) clamp(2rem, 5vw, 4.5rem);
 }
 
 .auth-language-toggle {
@@ -177,6 +179,49 @@ form {
   color: var(--danger);
 }
 
+.password-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.forgot-password {
+  padding: 0;
+  color: var(--primary);
+  background: none;
+  border: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.forgot-password:hover:not(:disabled) {
+  color: var(--primary-dark);
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
+.forgot-password:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+.forgot-password:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.success-message {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  color: #075e58;
+  background: #eefaf7;
+  border: 1px solid #b9e2d9;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
 .submit-button {
   width: 100%;
   margin-top: 0.35rem;
@@ -198,9 +243,13 @@ form {
 }
 
 @media (max-width: 820px) {
+  :host {
+    padding: 1rem;
+  }
+
   .auth-shell {
+    min-height: calc(100dvh - 2rem);
     grid-template-columns: 1fr;
-    margin: 1rem auto;
   }
 
   .auth-intro {
@@ -218,10 +267,13 @@ form {
 }
 
 @media (max-width: 520px) {
+  :host {
+    padding: 0;
+  }
+
   .auth-shell {
     width: 100%;
-    min-height: 100vh;
-    margin: 0;
+    min-height: 100dvh;
     border: 0;
     border-radius: 0;
   }
@@ -231,7 +283,7 @@ form {
   }
 
   .auth-card {
-    min-height: 100vh;
+    min-height: 100dvh;
     padding: 2rem 1.25rem;
   }
 }

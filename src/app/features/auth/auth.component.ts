@@ -30,7 +30,9 @@ export class AuthComponent {
 
   readonly isRegistering = signal(false);
   readonly isSubmitting = signal(false);
+  readonly isResettingPassword = signal(false);
   readonly errorMessage = signal('');
+  readonly successMessage = signal('');
 
   readonly form = this.formBuilder.group({
     displayName: ['', [Validators.maxLength(60)]],
@@ -41,6 +43,7 @@ export class AuthComponent {
   toggleMode(): void {
     this.isRegistering.update((value) => !value);
     this.errorMessage.set('');
+    this.successMessage.set('');
   }
 
   async submit(): Promise<void> {
@@ -58,6 +61,7 @@ export class AuthComponent {
 
     this.isSubmitting.set(true);
     this.errorMessage.set('');
+    this.successMessage.set('');
 
     try {
       if (this.isRegistering()) {
@@ -77,6 +81,7 @@ export class AuthComponent {
   async signInWithGoogle(): Promise<void> {
     this.isSubmitting.set(true);
     this.errorMessage.set('');
+    this.successMessage.set('');
 
     try {
       await this.authService.loginWithGoogle();
@@ -84,6 +89,34 @@ export class AuthComponent {
     } catch (error: unknown) {
       this.errorMessage.set(firebaseErrorMessage(error, this.language.current()));
     } finally {
+      this.isSubmitting.set(false);
+    }
+  }
+
+  async resetPassword(): Promise<void> {
+    const emailControl = this.form.controls.email;
+    emailControl.markAsTouched();
+
+    if (emailControl.invalid) {
+      return;
+    }
+
+    this.isSubmitting.set(true);
+    this.isResettingPassword.set(true);
+    this.errorMessage.set('');
+    this.successMessage.set('');
+
+    try {
+      await this.authService.requestPasswordReset(emailControl.getRawValue().trim());
+      this.successMessage.set(this.t('auth.resetEmailSent'));
+    } catch (error: unknown) {
+      if (this.hasFirebaseCode(error, 'auth/user-not-found')) {
+        this.successMessage.set(this.t('auth.resetEmailSent'));
+      } else {
+        this.errorMessage.set(firebaseErrorMessage(error, this.language.current()));
+      }
+    } finally {
+      this.isResettingPassword.set(false);
       this.isSubmitting.set(false);
     }
   }
@@ -97,5 +130,14 @@ export class AuthComponent {
 
   private navigateToDashboard(): Promise<boolean> {
     return this.zone.run(() => this.router.navigateByUrl('/'));
+  }
+
+  private hasFirebaseCode(error: unknown, code: string): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      String(error.code) === code
+    );
   }
 }

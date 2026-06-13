@@ -65,6 +65,36 @@ service cloud.firestore {
         && request.resource.data.updatedAt is timestamp;
     }
 
+    function validSpendingLimits() {
+      return request.resource.data.keys().hasOnly([
+          'dailyLimitCents',
+          'monthlyLimitCents',
+          'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'dailyLimitCents',
+          'monthlyLimitCents',
+          'updatedAt'
+        ])
+        && (
+          request.resource.data.dailyLimitCents == null
+          || (
+            request.resource.data.dailyLimitCents is int
+            && request.resource.data.dailyLimitCents > 0
+            && request.resource.data.dailyLimitCents <= 100000000000
+          )
+        )
+        && (
+          request.resource.data.monthlyLimitCents == null
+          || (
+            request.resource.data.monthlyLimitCents is int
+            && request.resource.data.monthlyLimitCents > 0
+            && request.resource.data.monthlyLimitCents <= 100000000000
+          )
+        )
+        && request.resource.data.updatedAt is timestamp;
+    }
+
     match /users/{userId} {
       allow read, delete: if signedInAs(userId);
       allow create: if signedInAs(userId) && validProfile();
@@ -78,6 +108,12 @@ service cloud.firestore {
         allow update: if signedInAs(userId)
           && validExpense()
           && request.resource.data.createdAt == resource.data.createdAt;
+      }
+
+      match /settings/spending-limits {
+        allow read: if signedInAs(userId);
+        allow create, update: if signedInAs(userId) && validSpendingLimits();
+        allow delete: if false;
       }
     }
 

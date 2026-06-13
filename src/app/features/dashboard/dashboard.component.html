@@ -55,6 +55,198 @@
         </div>
       </section>
 
+      <section class="limits-card" aria-labelledby="limits-title">
+        <div class="limits-header">
+          <div>
+            <p class="eyebrow">{{ t('limits.eyebrow') }}</p>
+            <h2 id="limits-title">{{ t('limits.title') }}</h2>
+            <p>{{ t('limits.description') }}</p>
+          </div>
+
+          <form
+            class="limit-settings-form"
+            [formGroup]="spendingLimitForm"
+            (ngSubmit)="saveSpendingLimits()"
+          >
+            <div class="field">
+              <label for="daily-limit">{{ t('limits.dailyLimit') }}</label>
+              <div class="amount-input">
+                <span aria-hidden="true">&euro;</span>
+                <input
+                  id="daily-limit"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  formControlName="dailyLimit"
+                  placeholder="0.00"
+                >
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="monthly-limit">{{ t('limits.monthlyLimit') }}</label>
+              <div class="amount-input">
+                <span aria-hidden="true">&euro;</span>
+                <input
+                  id="monthly-limit"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  formControlName="monthlyLimit"
+                  placeholder="0.00"
+                >
+              </div>
+            </div>
+
+            <button
+              class="button button-primary save-limits-button"
+              type="submit"
+              [disabled]="isSavingLimits()"
+            >
+              {{ isSavingLimits() ? t('limits.saving') : t('limits.save') }}
+            </button>
+          </form>
+        </div>
+
+        @if (spendingLimitForm.invalid && spendingLimitForm.touched) {
+          <p class="limit-validation" role="alert">{{ t('limits.invalid') }}</p>
+        }
+
+        @if (limitError()) {
+          <p class="error-message" role="alert">{{ limitError() }}</p>
+        }
+
+        @if (limitSuccess()) {
+          <p class="success-message" role="status">{{ limitSuccess() }}</p>
+        }
+
+        <div class="limit-status-grid" aria-live="polite">
+          <article
+            class="limit-status"
+            [class.limit-exceeded]="vm.limitSummary.daily?.isExceeded"
+          >
+            <div class="limit-status-heading">
+              <div>
+                <span>{{ t('limits.daily') }}</span>
+                <strong>{{ t('limits.today') }}</strong>
+              </div>
+              @if (vm.limitSummary.daily; as daily) {
+                <span class="limit-percentage">{{ daily.usedPercent }}%</span>
+              }
+            </div>
+
+            @if (vm.limitSummary.daily; as daily) {
+              <p class="limit-amounts">
+                <strong>
+                  {{
+                    daily.spentCents / 100
+                      | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                  }}
+                </strong>
+                <span>
+                  /
+                  {{
+                    daily.limitCents / 100
+                      | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                  }}
+                </span>
+              </p>
+              <div class="limit-progress" aria-hidden="true">
+                <span
+                  [style.width.%]="daily.usedPercent > 100 ? 100 : daily.usedPercent"
+                ></span>
+              </div>
+              @if (daily.isExceeded) {
+                <p class="limit-alert">
+                  {{ t('limits.exceededBy') }}
+                  <strong>
+                    {{
+                      daily.exceededByCents / 100
+                        | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                    }}
+                  </strong>
+                  <span>({{ daily.exceededPercent }}%)</span>
+                </p>
+              } @else {
+                <p class="limit-remaining">
+                  {{ t('limits.remaining') }}
+                  <strong>
+                    {{
+                      daily.remainingCents / 100
+                        | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                    }}
+                  </strong>
+                </p>
+              }
+            } @else {
+              <p class="limit-empty">{{ t('limits.noDaily') }}</p>
+            }
+          </article>
+
+          <article
+            class="limit-status"
+            [class.limit-exceeded]="vm.limitSummary.monthly?.isExceeded"
+          >
+            <div class="limit-status-heading">
+              <div>
+                <span>{{ t('limits.monthly') }}</span>
+                <strong>{{ t('limits.thisMonth') }}</strong>
+              </div>
+              @if (vm.limitSummary.monthly; as monthly) {
+                <span class="limit-percentage">{{ monthly.usedPercent }}%</span>
+              }
+            </div>
+
+            @if (vm.limitSummary.monthly; as monthly) {
+              <p class="limit-amounts">
+                <strong>
+                  {{
+                    monthly.spentCents / 100
+                      | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                  }}
+                </strong>
+                <span>
+                  /
+                  {{
+                    monthly.limitCents / 100
+                      | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                  }}
+                </span>
+              </p>
+              <div class="limit-progress" aria-hidden="true">
+                <span
+                  [style.width.%]="monthly.usedPercent > 100 ? 100 : monthly.usedPercent"
+                ></span>
+              </div>
+              @if (monthly.isExceeded) {
+                <p class="limit-alert">
+                  {{ t('limits.exceededBy') }}
+                  <strong>
+                    {{
+                      monthly.exceededByCents / 100
+                        | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                    }}
+                  </strong>
+                  <span>({{ monthly.exceededPercent }}%)</span>
+                </p>
+              } @else {
+                <p class="limit-remaining">
+                  {{ t('limits.remaining') }}
+                  <strong>
+                    {{
+                      monthly.remainingCents / 100
+                        | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                    }}
+                  </strong>
+                </p>
+              }
+            } @else {
+              <p class="limit-empty">{{ t('limits.noMonthly') }}</p>
+            }
+          </article>
+        </div>
+      </section>
+
       <section class="analytics-card" aria-labelledby="analytics-title">
         <div class="analytics-header">
           <div>

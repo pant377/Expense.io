@@ -4,6 +4,7 @@ import {
   User,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -46,6 +47,10 @@ export class AuthService {
 
   async login(email: string, password: string): Promise<void> {
     await signInWithEmailAndPassword(firebaseAuth, email, password);
+  }
+
+  async requestPasswordReset(email: string): Promise<void> {
+    await sendPasswordResetEmail(firebaseAuth, email);
   }
 
   async loginWithGoogle(): Promise<void> {

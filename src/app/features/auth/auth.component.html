@@ -77,7 +77,23 @@
       </div>
 
       <div class="field">
-        <label for="password">{{ t('auth.password') }}</label>
+        <div class="password-heading">
+          <label for="password">{{ t('auth.password') }}</label>
+          @if (!isRegistering()) {
+            <button
+              class="forgot-password"
+              type="button"
+              [disabled]="isSubmitting()"
+              (click)="resetPassword()"
+            >
+              {{
+                isResettingPassword()
+                  ? t('auth.sendingReset')
+                  : t('auth.resetPassword')
+              }}
+            </button>
+          }
+        </div>
         <input
           id="password"
           type="password"
@@ -92,6 +108,10 @@
 
       @if (errorMessage()) {
         <p class="error-message" role="alert">{{ errorMessage() }}</p>
+      }
+
+      @if (successMessage()) {
+        <p class="success-message" role="status">{{ successMessage() }}</p>
       }
 
       <button class="button button-primary submit-button" type="submit" [disabled]="isSubmitting()">

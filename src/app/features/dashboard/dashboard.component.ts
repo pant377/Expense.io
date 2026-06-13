@@ -10,7 +10,15 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Timestamp } from 'firebase/firestore';
-import { catchError, combineLatest, map, of, shareReplay, switchMap } from 'rxjs';
+import {
+  catchError,
+  combineLatest,
+  map,
+  of,
+  shareReplay,
+  switchMap,
+  tap,
+} from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { firebaseErrorMessage } from '../../core/errors/firebase-error';
@@ -38,6 +46,12 @@ import { ExpenseService } from '../../core/expenses/expense.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { LanguageToggleComponent } from '../../core/i18n/language-toggle.component';
 import { TranslationKey } from '../../core/i18n/translations';
+import {
+  EMPTY_SPENDING_LIMITS,
+  SpendingLimits,
+  buildSpendingLimitSummary,
+} from '../../core/limits/spending-limit.model';
+import { SpendingLimitService } from '../../core/limits/spending-limit.service';
 import { paginateItems } from '../../core/pagination/pagination';
 
 @Component({
@@ -57,14 +71,18 @@ export class DashboardComponent {
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly authService = inject(AuthService);
   private readonly expenseService = inject(ExpenseService);
+  private readonly spendingLimitService = inject(SpendingLimitService);
   private readonly router = inject(Router);
   readonly language = inject(LanguageService);
 
   readonly categories = EXPENSE_CATEGORIES;
   readonly months = Array.from({ length: 12 }, (_, value) => value);
   readonly isSaving = signal(false);
+  readonly isSavingLimits = signal(false);
   readonly isDeleting = signal(false);
   readonly actionError = signal('');
+  readonly limitError = signal('');
+  readonly limitSuccess = signal('');
   readonly deleteError = signal('');
   readonly loadError = signal('');
   readonly categoryMenuOpen = signal(false);
@@ -88,16 +106,39 @@ export class DashboardComponent {
     occurredAt: [this.today(), Validators.required],
   });
 
+  readonly spendingLimitForm = this.formBuilder.group({
+    dailyLimit: [
+      null as number | null,
+      [Validators.min(0.01), Validators.max(1_000_000_000)],
+    ],
+    monthlyLimit: [
+      null as number | null,
+      [Validators.min(0.01), Validators.max(1_000_000_000)],
+    ],
+  });
+
   private readonly expenseViewModel$ = this.authService.user$.pipe(
     switchMap((user) => {
       if (!user) {
         return of(null);
       }
 
-      return this.expenseService.watchExpenses(user.uid).pipe(
-        map((expenses) => ({
+      const limits$ = this.spendingLimitService.watchLimits(user.uid).pipe(
+        tap((limits) => this.syncSpendingLimitForm(limits)),
+        catchError((error: unknown) => {
+          this.limitError.set(firebaseErrorMessage(error, this.language.current()));
+          return of({ ...EMPTY_SPENDING_LIMITS });
+        }),
+      );
+
+      return combineLatest([
+        this.expenseService.watchExpenses(user.uid),
+        limits$,
+      ]).pipe(
+        map(([expenses, limits]) => ({
           user,
           expenses,
+          limits,
           totalCents: expenses.reduce((total, expense) => total + expense.amountCents, 0),
           monthCents: this.currentMonthTotal(expenses),
         })),
@@ -106,6 +147,7 @@ export class DashboardComponent {
           return of({
             user,
             expenses: [] as Expense[],
+            limits: { ...EMPTY_SPENDING_LIMITS },
             totalCents: 0,
             monthCents: 0,
           });
@@ -134,6 +176,10 @@ export class DashboardComponent {
 
       return {
         ...viewModel,
+        limitSummary: buildSpendingLimitSummary(
+          viewModel.expenses,
+          viewModel.limits,
+        ),
         analytics: buildExpenseAnalytics(
           viewModel.expenses,
           filters,
@@ -187,6 +233,41 @@ export class DashboardComponent {
       this.actionError.set(firebaseErrorMessage(error, this.language.current()));
     } finally {
       this.isSaving.set(false);
+    }
+  }
+
+  async saveSpendingLimits(): Promise<void> {
+    if (this.spendingLimitForm.invalid) {
+      this.spendingLimitForm.markAllAsTouched();
+      return;
+    }
+
+    const user = this.authService.currentUser;
+
+    if (!user) {
+      return;
+    }
+
+    const { dailyLimit, monthlyLimit } =
+      this.spendingLimitForm.getRawValue();
+
+    this.isSavingLimits.set(true);
+    this.limitError.set('');
+    this.limitSuccess.set('');
+
+    try {
+      await this.spendingLimitService.saveLimits(user.uid, {
+        dailyLimitCents:
+          dailyLimit === null ? null : eurosToCents(dailyLimit),
+        monthlyLimitCents:
+          monthlyLimit === null ? null : eurosToCents(monthlyLimit),
+      });
+      this.spendingLimitForm.markAsPristine();
+      this.limitSuccess.set(this.t('limits.saved'));
+    } catch (error: unknown) {
+      this.limitError.set(firebaseErrorMessage(error, this.language.current()));
+    } finally {
+      this.isSavingLimits.set(false);
     }
   }
 
@@ -331,6 +412,26 @@ export class DashboardComponent {
 
       return isCurrentMonth ? total + expense.amountCents : total;
     }, 0);
+  }
+
+  private syncSpendingLimitForm(limits: SpendingLimits): void {
+    if (this.spendingLimitForm.dirty) {
+      return;
+    }
+
+    this.spendingLimitForm.setValue(
+      {
+        dailyLimit:
+          limits.dailyLimitCents === null
+            ? null
+            : limits.dailyLimitCents / 100,
+        monthlyLimit:
+          limits.monthlyLimitCents === null
+            ? null
+            : limits.monthlyLimitCents / 100,
+      },
+      { emitEvent: false },
+    );
   }
 
   private updateExpenseListFilters(
