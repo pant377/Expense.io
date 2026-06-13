@@ -173,6 +173,7 @@ a {
 
 .chart-scroll {
   max-width: 100%;
+  padding-top: 2rem;
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
@@ -1095,6 +1096,22 @@ a {
   background: #3a2225;
 }
 
+@media (max-width: 760px) {
+  app-dashboard .analytics-card .chart-panel .panel-heading {
+    flex-wrap: wrap;
+  }
+
+  app-dashboard .analytics-card .chart-panel .panel-heading > div {
+    min-width: 0;
+    flex: 1 1 260px;
+  }
+
+  app-dashboard .analytics-card .chart-panel .panel-heading > span {
+    max-width: 100%;
+    flex: 0 0 auto;
+  }
+}
+
 @media (max-width: 600px) {
   app-dashboard .dashboard-shell .topbar {
     gap: 0.5rem;
@@ -1147,6 +1164,7 @@ a {
   }
 
   app-dashboard .analytics-card .chart-scroll {
+    padding-top: 2rem;
     padding-bottom: 0.45rem;
     touch-action: pan-x;
   }
