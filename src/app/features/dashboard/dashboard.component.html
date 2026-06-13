@@ -1,0 +1,465 @@
+<main class="dashboard-shell">
+  @if (viewModel$ | async; as vm) {
+    @if (vm) {
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="Expense.io home">
+          <span class="brand-mark">E</span>
+          <span>Expense.io</span>
+        </a>
+
+        <div class="account">
+          <div>
+            <strong>{{ vm.user.displayName || 'Your account' }}</strong>
+            <span>{{ vm.user.email }}</span>
+          </div>
+          <button class="logout-button" type="button" (click)="logout()">Sign out</button>
+        </div>
+      </header>
+
+      <section class="welcome">
+        <div>
+          <p class="eyebrow">Your money overview</p>
+          <h1>Good to see you, {{ vm.user.displayName?.split(' ')?.[0] || 'there' }}.</h1>
+          <p>Capture spending as it happens and keep the full picture in sight.</p>
+        </div>
+
+        <div class="summary-grid" aria-label="Expense summary">
+          <article class="summary-card primary-summary">
+            <span>This month</span>
+            <strong>{{ vm.monthCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2' }}</strong>
+            <small>Live total from Firestore</small>
+          </article>
+          <article class="summary-card">
+            <span>All expenses</span>
+            <strong>{{ vm.totalCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2' }}</strong>
+            <small>{{ vm.expenses.length }} recorded transactions</small>
+          </article>
+        </div>
+      </section>
+
+      <section class="analytics-card" aria-labelledby="analytics-title">
+        <div class="analytics-header">
+          <div>
+            <p class="eyebrow">Spending analysis</p>
+            <h2 id="analytics-title">{{ vm.analytics.periodLabel }} overview</h2>
+          </div>
+
+          <div class="period-tabs" role="group" aria-label="Analytics period">
+            <button
+              type="button"
+              [class.active]="vm.analyticsFilters.mode === 'month'"
+              (click)="updateAnalyticsMode('month')"
+            >
+              Month
+            </button>
+            <button
+              type="button"
+              [class.active]="vm.analyticsFilters.mode === 'year'"
+              (click)="updateAnalyticsMode('year')"
+            >
+              Year
+            </button>
+          </div>
+        </div>
+
+        <div class="analytics-filters" aria-label="Analytics filters">
+          <label class="filter-control">
+            <span>Year</span>
+            <select
+              [value]="vm.analyticsFilters.year"
+              (change)="updateAnalyticsYear($any($event.target).value)"
+            >
+              @for (year of vm.availableYears; track year) {
+                <option
+                  [value]="year"
+                  [selected]="year === vm.analyticsFilters.year"
+                >
+                  {{ year }}
+                </option>
+              }
+            </select>
+          </label>
+
+          @if (vm.analyticsFilters.mode === 'month') {
+            <label class="filter-control">
+              <span>Month</span>
+              <select
+                [value]="vm.analyticsFilters.month"
+                (change)="updateAnalyticsMonth($any($event.target).value)"
+              >
+                @for (month of months; track month.value) {
+                  <option
+                    [value]="month.value"
+                    [selected]="month.value === vm.analyticsFilters.month"
+                  >
+                    {{ month.label }}
+                  </option>
+                }
+              </select>
+            </label>
+          }
+
+          <label class="filter-control category-filter">
+            <span>Category</span>
+            <select
+              [value]="vm.analyticsFilters.category"
+              (change)="updateAnalyticsCategory($any($event.target).value)"
+            >
+              <option
+                value="All"
+                [selected]="vm.analyticsFilters.category === 'All'"
+              >
+                All categories
+              </option>
+              @for (category of categories; track category) {
+                <option
+                  [value]="category"
+                  [selected]="category === vm.analyticsFilters.category"
+                >
+                  {{ category }}
+                </option>
+              }
+            </select>
+          </label>
+        </div>
+
+        <div class="analytics-stats">
+          <article>
+            <span>Total spent</span>
+            <strong>
+              {{ vm.analytics.totalCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2' }}
+            </strong>
+            @if (vm.analytics.changePercent === null) {
+              <small>No previous-period spending</small>
+            } @else {
+              <small
+                [class.change-up]="vm.analytics.changePercent > 0"
+                [class.change-down]="vm.analytics.changePercent < 0"
+              >
+                {{ vm.analytics.changePercent > 0 ? '+' : '' }}{{ vm.analytics.changePercent }}%
+                vs previous {{ vm.analyticsFilters.mode }}
+              </small>
+            }
+          </article>
+          <article>
+            <span>Transactions</span>
+            <strong>{{ vm.analytics.count }}</strong>
+            <small>In the selected period</small>
+          </article>
+          <article>
+            <span>Average expense</span>
+            <strong>
+              {{ vm.analytics.averageCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2' }}
+            </strong>
+            <small>Per transaction</small>
+          </article>
+          <article>
+            <span>Top category</span>
+            <strong class="top-category">{{ vm.analytics.topCategory || 'No data' }}</strong>
+            <small>By total amount</small>
+          </article>
+        </div>
+
+        <div class="analytics-grid">
+          <article class="chart-panel">
+            <div class="panel-heading">
+              <div>
+                <h3>{{ vm.analytics.chartLabel }}</h3>
+                <p>Hover over a bar for the exact amount.</p>
+              </div>
+              <span>{{ vm.analyticsFilters.category }}</span>
+            </div>
+
+            <div
+              class="spending-chart"
+              [class.daily-chart]="vm.analyticsFilters.mode === 'month'"
+              role="img"
+              [attr.aria-label]="vm.analytics.chartLabel + ' for ' + vm.analytics.periodLabel"
+            >
+              @for (point of vm.analytics.points; track point.label; let index = $index) {
+                <div
+                  class="chart-column"
+                  [attr.data-tooltip]="
+                    (point.amountCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2')
+                  "
+                  [attr.aria-label]="
+                    point.label +
+                    ': ' +
+                    (point.amountCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2')
+                  "
+                >
+                  <div class="bar-track">
+                    <span
+                      class="bar-fill"
+                      [class.has-value]="point.amountCents > 0"
+                      [style.height.%]="point.percentage"
+                    ></span>
+                  </div>
+                  <small>
+                    @if (
+                      vm.analyticsFilters.mode === 'year' ||
+                      index === 0 ||
+                      (index + 1) % 5 === 0
+                    ) {
+                      {{ point.shortLabel }}
+                    }
+                  </small>
+                </div>
+              }
+            </div>
+          </article>
+
+          <article class="breakdown-panel">
+            <div class="panel-heading">
+              <div>
+                <h3>Category breakdown</h3>
+                <p>Share of selected-period spending.</p>
+              </div>
+            </div>
+
+            @if (vm.analytics.categories.length) {
+              <div class="category-breakdown">
+                @for (item of vm.analytics.categories; track item.category) {
+                  <div class="breakdown-row">
+                    <div class="breakdown-label">
+                      <span class="category-dot" [attr.data-category]="item.category"></span>
+                      <strong>{{ item.category }}</strong>
+                      <small>{{ item.count }} {{ item.count === 1 ? 'expense' : 'expenses' }}</small>
+                      <span>
+                        {{ item.amountCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2' }}
+                      </span>
+                    </div>
+                    <div class="breakdown-track">
+                      <span
+                        [attr.data-category]="item.category"
+                        [style.width.%]="item.percentage"
+                      ></span>
+                    </div>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="analytics-empty">
+                <span aria-hidden="true">%</span>
+                <strong>No data for these filters</strong>
+                <p>Try another period or category.</p>
+              </div>
+            }
+          </article>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <aside class="expense-form-card">
+          <div>
+            <p class="eyebrow">New transaction</p>
+            <h2>Add an expense</h2>
+          </div>
+
+          <form [formGroup]="expenseForm" (ngSubmit)="addExpense()">
+            <div class="field">
+              <label for="description">Description</label>
+              <input
+                id="description"
+                type="text"
+                formControlName="description"
+                placeholder="Weekly groceries"
+                autocomplete="off"
+              >
+            </div>
+
+            <div class="form-row">
+              <div class="field">
+                <label for="amount">Amount</label>
+                <div class="amount-input">
+                  <span aria-hidden="true">&euro;</span>
+                  <input
+                    id="amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    formControlName="amount"
+                    placeholder="0.00"
+                  >
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="date">Date</label>
+                <input id="date" type="date" formControlName="occurredAt">
+              </div>
+            </div>
+
+            <div class="field category-field" (click)="$event.stopPropagation()">
+              <label id="category-label">Category</label>
+              <button
+                class="category-select"
+                type="button"
+                aria-haspopup="listbox"
+                aria-labelledby="category-label selected-category"
+                [attr.aria-expanded]="categoryMenuOpen()"
+                (click)="toggleCategoryMenu($event)"
+              >
+                <span
+                  class="category-choice-icon"
+                  [attr.data-category]="expenseForm.controls.category.value"
+                >
+                  {{ expenseForm.controls.category.value.charAt(0) }}
+                </span>
+                <span id="selected-category">{{ expenseForm.controls.category.value }}</span>
+                <span class="select-chevron" aria-hidden="true"></span>
+              </button>
+
+              @if (categoryMenuOpen()) {
+                <div class="category-menu" role="listbox" aria-labelledby="category-label">
+                  @for (category of categories; track category) {
+                    <button
+                      type="button"
+                      role="option"
+                      [attr.aria-selected]="expenseForm.controls.category.value === category"
+                      [class.selected]="expenseForm.controls.category.value === category"
+                      (click)="selectCategory(category, $event)"
+                    >
+                      <span class="category-choice-icon" [attr.data-category]="category">
+                        {{ category.charAt(0) }}
+                      </span>
+                      <span>{{ category }}</span>
+                      @if (expenseForm.controls.category.value === category) {
+                        <span class="selected-check" aria-hidden="true">✓</span>
+                      }
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+
+            @if (actionError()) {
+              <p class="error-message" role="alert">{{ actionError() }}</p>
+            }
+
+            <button class="button button-primary add-button" type="submit" [disabled]="isSaving()">
+              {{ isSaving() ? 'Saving...' : 'Add expense' }}
+            </button>
+          </form>
+        </aside>
+
+        <section class="expense-list-card" aria-labelledby="expenses-title">
+          <div class="list-header">
+            <div>
+              <p class="eyebrow">Activity</p>
+              <h2 id="expenses-title">Recent expenses</h2>
+            </div>
+            <span class="expense-count">{{ vm.expenses.length }}</span>
+          </div>
+
+          @if (loadError()) {
+            <p class="error-message" role="alert">{{ loadError() }}</p>
+          }
+
+          @if (vm.expenses.length) {
+            <div class="expense-list">
+              @for (expense of vm.expenses; track expense.id) {
+                <article class="expense-item">
+                  <div class="category-icon" [attr.data-category]="expense.category">
+                    {{ expense.category.charAt(0) }}
+                  </div>
+                  <div class="expense-copy">
+                    <strong>{{ expense.description }}</strong>
+                    <span>
+                      {{ expense.category }} &middot;
+                      {{ timestampToDate(expense.occurredAt) | date: 'd MMM y' }}
+                    </span>
+                  </div>
+                  <strong class="expense-amount">
+                    {{ expense.amountCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2' }}
+                  </strong>
+                  <button
+                    class="delete-button"
+                    type="button"
+                    [attr.aria-label]="'Delete ' + expense.description"
+                    (click)="requestDelete(expense)"
+                  >
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </article>
+              }
+            </div>
+          } @else if (!loadError()) {
+            <div class="empty-state">
+              <span aria-hidden="true">&euro;</span>
+              <h3>No expenses yet</h3>
+              <p>Add your first transaction and your overview will appear here.</p>
+            </div>
+          }
+        </section>
+      </section>
+    }
+  } @else {
+    <div class="loading-state" aria-live="polite">
+      <span></span>
+      <p>Loading your expenses...</p>
+    </div>
+  }
+</main>
+
+@if (expensePendingDelete(); as expense) {
+  <div class="modal-backdrop" (click)="cancelDelete()">
+    <section
+      class="delete-modal"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="delete-title"
+      aria-describedby="delete-description"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="delete-modal-icon" aria-hidden="true">!</div>
+      <div class="delete-modal-copy">
+        <p class="eyebrow">Delete expense</p>
+        <h2 id="delete-title">Remove this transaction?</h2>
+        <p id="delete-description">
+          This will permanently delete
+          <strong>{{ expense.description }}</strong>
+          from your expense history.
+        </p>
+      </div>
+
+      <div class="delete-preview">
+        <div>
+          <span class="category-choice-icon" [attr.data-category]="expense.category">
+            {{ expense.category.charAt(0) }}
+          </span>
+          <div>
+            <strong>{{ expense.category }}</strong>
+            <span>{{ timestampToDate(expense.occurredAt) | date: 'd MMMM y' }}</span>
+          </div>
+        </div>
+        <strong>
+          {{ expense.amountCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2' }}
+        </strong>
+      </div>
+
+      @if (deleteError()) {
+        <p class="error-message" role="alert">{{ deleteError() }}</p>
+      }
+
+      <div class="modal-actions">
+        <button
+          class="button button-secondary"
+          type="button"
+          [disabled]="isDeleting()"
+          (click)="cancelDelete()"
+        >
+          Keep expense
+        </button>
+        <button
+          class="button confirm-delete-button"
+          type="button"
+          [disabled]="isDeleting()"
+          (click)="confirmDelete()"
+        >
+          {{ isDeleting() ? 'Deleting...' : 'Delete expense' }}
+        </button>
+      </div>
+    </section>
+  </div>
+}

@@ -1,0 +1,88 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedInAs(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function validProfile() {
+      return request.resource.data.keys().hasOnly([
+          'displayName',
+          'email',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'displayName',
+          'email',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.displayName.size() <= 60
+        && request.resource.data.email is string
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp
+        ;
+    }
+
+    function validExpense() {
+      return request.resource.data.keys().hasOnly([
+          'description',
+          'amountCents',
+          'category',
+          'occurredAt',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'description',
+          'amountCents',
+          'category',
+          'occurredAt',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.description.size() <= 120
+        && request.resource.data.amountCents is int
+        && request.resource.data.amountCents > 0
+        && request.resource.data.amountCents <= 100000000000
+        && request.resource.data.category in [
+          'Food',
+          'Transport',
+          'Home',
+          'Health',
+          'Leisure',
+          'Subscriptions',
+          'Other'
+        ]
+        && request.resource.data.occurredAt is timestamp
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow read, delete: if signedInAs(userId);
+      allow create: if signedInAs(userId) && validProfile();
+      allow update: if signedInAs(userId)
+        && validProfile()
+        && request.resource.data.createdAt == resource.data.createdAt;
+
+      match /expenses/{expenseId} {
+        allow read, delete: if signedInAs(userId);
+        allow create: if signedInAs(userId) && validExpense();
+        allow update: if signedInAs(userId)
+          && validExpense()
+          && request.resource.data.createdAt == resource.data.createdAt;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

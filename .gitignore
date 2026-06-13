@@ -11,6 +11,20 @@
 npm-debug.log
 yarn-error.log
 
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+/.firebaserc
+!/firebase.project.example.json
+/src/environments/firebase.generated.ts
+client_secret_*.json
+*-firebase-adminsdk-*.json
+*service-account*.json
+serviceAccountKey.json
+*.pem
+*.p12
+
 # IDEs and editors
 .idea/
 .project
@@ -36,6 +50,10 @@ yarn-error.log
 /libpeerconnection.log
 testem.log
 /typings
+/.firebase
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
 
 # System files
 .DS_Store

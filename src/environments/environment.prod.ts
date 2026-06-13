@@ -1,11 +1,7 @@
+import { firebaseConfig } from './firebase.generated';
+
 export const environment = {
-  production: true
+  production: true,
+  useEmulators: false,
+  firebase: firebaseConfig,
 };
-let sum = 0;
-function setSum(value:number) {
-  sum = value;
-}
-export function getSum(){
-  return sum
-}
-export { sum, setSum };

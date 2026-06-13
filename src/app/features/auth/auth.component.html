@@ -1,0 +1,118 @@
+<main class="auth-shell">
+  <section class="auth-intro" aria-labelledby="auth-title">
+    <a class="brand" href="/" aria-label="Expense.io home">
+      <span class="brand-mark">E</span>
+      <span>Expense.io</span>
+    </a>
+
+    <div class="intro-copy">
+      <p class="eyebrow">Personal finance, without the noise</p>
+      <h1 id="auth-title">Know where your money goes.</h1>
+      <p>
+        A focused expense tracker with private accounts, instant sync and a clear view of
+        your spending.
+      </p>
+    </div>
+
+    <div class="privacy-note">
+      <span class="privacy-icon" aria-hidden="true">✓</span>
+      <div>
+        <strong>Your data stays yours</strong>
+        <span>Every expense is protected by your Firebase account.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="auth-card" aria-label="Account access">
+    <div>
+      <p class="eyebrow">{{ isRegistering() ? 'Create your account' : 'Welcome back' }}</p>
+      <h2>{{ isRegistering() ? 'Start tracking smarter' : 'Sign in to continue' }}</h2>
+      <p class="card-subtitle">
+        {{
+          isRegistering()
+            ? 'Set up your private workspace in under a minute.'
+            : 'Your latest expenses are waiting for you.'
+        }}
+      </p>
+    </div>
+
+    <button
+      class="button button-secondary google-button"
+      type="button"
+      [disabled]="isSubmitting()"
+      (click)="signInWithGoogle()"
+    >
+      <span class="google-mark" aria-hidden="true">G</span>
+      Continue with Google
+    </button>
+
+    <div class="divider"><span>or use email</span></div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      @if (isRegistering()) {
+        <div class="field">
+          <label for="display-name">Name</label>
+          <input
+            id="display-name"
+            type="text"
+            formControlName="displayName"
+            autocomplete="name"
+            placeholder="Alex Morgan"
+          >
+          @if (form.controls.displayName.touched && form.controls.displayName.invalid) {
+            <small>Please enter your name.</small>
+          }
+        </div>
+      }
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          autocomplete="email"
+          placeholder="you@example.com"
+        >
+        @if (form.controls.email.touched && form.controls.email.invalid) {
+          <small>Enter a valid email address.</small>
+        }
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          [autocomplete]="isRegistering() ? 'new-password' : 'current-password'"
+          placeholder="At least 6 characters"
+        >
+        @if (form.controls.password.touched && form.controls.password.invalid) {
+          <small>Password must contain at least 6 characters.</small>
+        }
+      </div>
+
+      @if (errorMessage()) {
+        <p class="error-message" role="alert">{{ errorMessage() }}</p>
+      }
+
+      <button class="button button-primary submit-button" type="submit" [disabled]="isSubmitting()">
+        {{
+          isSubmitting()
+            ? 'Please wait...'
+            : isRegistering()
+              ? 'Create account'
+              : 'Sign in'
+        }}
+      </button>
+    </form>
+
+    <p class="mode-switch">
+      {{ isRegistering() ? 'Already have an account?' : 'New to Expense.io?' }}
+      <button type="button" (click)="toggleMode()">
+        {{ isRegistering() ? 'Sign in' : 'Create one' }}
+      </button>
+    </p>
+  </section>
+</main>
