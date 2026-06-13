@@ -20,6 +20,7 @@ import {
   tap,
 } from 'rxjs';
 
+import { AccountService } from '../../core/account/account.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { firebaseErrorMessage } from '../../core/errors/firebase-error';
 import {
@@ -36,6 +37,7 @@ import {
   ExpenseCategory,
   eurosToCents,
 } from '../../core/expenses/expense.model';
+import { buildExpenseCsv } from '../../core/expenses/expense-export';
 import {
   EMPTY_EXPENSE_LIST_FILTERS,
   ExpenseListCategory,
@@ -44,6 +46,11 @@ import {
   hasExpenseListFilters,
 } from '../../core/expenses/expense-list';
 import { ExpenseService } from '../../core/expenses/expense.service';
+import {
+  RecurringExpenseSchedule,
+  RecurringFrequency,
+} from '../../core/expenses/recurring-expense.model';
+import { RecurringExpenseService } from '../../core/expenses/recurring-expense.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { LanguageToggleComponent } from '../../core/i18n/language-toggle.component';
 import { TranslationKey } from '../../core/i18n/translations';
@@ -54,6 +61,13 @@ import {
 } from '../../core/limits/spending-limit.model';
 import { SpendingLimitService } from '../../core/limits/spending-limit.service';
 import { paginateItems } from '../../core/pagination/pagination';
+import { ThemeService } from '../../core/theme/theme.service';
+
+interface PieSegment extends CategoryBreakdown {
+  path: string;
+  offsetX: number;
+  offsetY: number;
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -80,24 +94,39 @@ export class DashboardComponent {
     Other: '#718096',
   };
   private readonly formBuilder = inject(NonNullableFormBuilder);
+  private readonly accountService = inject(AccountService);
   private readonly authService = inject(AuthService);
   private readonly expenseService = inject(ExpenseService);
+  private readonly recurringExpenseService = inject(RecurringExpenseService);
   private readonly spendingLimitService = inject(SpendingLimitService);
   private readonly router = inject(Router);
   readonly language = inject(LanguageService);
+  readonly theme = inject(ThemeService);
 
   readonly categories = EXPENSE_CATEGORIES;
   readonly months = Array.from({ length: 12 }, (_, value) => value);
   readonly isSaving = signal(false);
   readonly isSavingLimits = signal(false);
   readonly isDeleting = signal(false);
+  readonly isUpdatingExpense = signal(false);
+  readonly isDeletingAccount = signal(false);
+  readonly recurringActionId = signal<string | null>(null);
   readonly actionError = signal('');
   readonly limitError = signal('');
   readonly limitSuccess = signal('');
   readonly deleteError = signal('');
+  readonly editError = signal('');
+  readonly recurringError = signal('');
+  readonly accountDeleteError = signal('');
   readonly loadError = signal('');
+  readonly settingsOpen = signal(false);
+  readonly deleteAccountOpen = signal(false);
+  readonly recurringOpen = signal(false);
   readonly categoryMenuOpen = signal(false);
   readonly expensePendingDelete = signal<Expense | null>(null);
+  readonly expensePendingEdit = signal<Expense | null>(null);
+  readonly recurringSchedules = signal<RecurringExpenseSchedule[]>([]);
+  readonly hoveredPieCategory = signal<CategoryBreakdown | null>(null);
   readonly expensePage = signal(1);
   readonly expensePageSize = 12;
   readonly expenseListFilters = signal<ExpenseListFilters>({
@@ -116,6 +145,15 @@ export class DashboardComponent {
     amount: [null as number | null, [Validators.required, Validators.min(0.01)]],
     category: ['Food' as ExpenseCategory, Validators.required],
     occurredAt: [this.today(), Validators.required],
+    recurring: [false],
+    frequency: ['monthly' as RecurringFrequency, Validators.required],
+  });
+
+  readonly editExpenseForm = this.formBuilder.group({
+    description: ['', [Validators.required, Validators.maxLength(120)]],
+    amount: [null as number | null, [Validators.required, Validators.min(0.01)]],
+    category: ['Food' as ExpenseCategory, Validators.required],
+    occurredAt: ['', Validators.required],
   });
 
   readonly spendingLimitForm = this.formBuilder.group({
@@ -127,6 +165,11 @@ export class DashboardComponent {
       null as number | null,
       [Validators.min(0.01), Validators.max(1_000_000_000)],
     ],
+  });
+
+  readonly deleteAccountForm = this.formBuilder.group({
+    confirmation: ['', Validators.required],
+    password: [''],
   });
 
   private readonly expenseViewModel$ = this.authService.user$.pipe(
@@ -142,15 +185,31 @@ export class DashboardComponent {
           return of({ ...EMPTY_SPENDING_LIMITS });
         }),
       );
+      const recurringSchedules$ = this.recurringExpenseService
+        .watchSchedules(user.uid)
+        .pipe(
+          tap((schedules) => {
+            this.recurringSchedules.set(schedules);
+            void this.syncRecurringExpenses(user.uid, schedules);
+          }),
+          catchError((error: unknown) => {
+            this.recurringError.set(
+              firebaseErrorMessage(error, this.language.current()),
+            );
+            return of([] as RecurringExpenseSchedule[]);
+          }),
+        );
 
       return combineLatest([
         this.expenseService.watchExpenses(user.uid),
         limits$,
+        recurringSchedules$,
       ]).pipe(
-        map(([expenses, limits]) => ({
+        map(([expenses, limits, recurringSchedules]) => ({
           user,
           expenses,
           limits,
+          recurringSchedules,
           totalCents: expenses.reduce((total, expense) => total + expense.amountCents, 0),
           monthCents: this.currentMonthTotal(expenses),
         })),
@@ -160,6 +219,7 @@ export class DashboardComponent {
             user,
             expenses: [] as Expense[],
             limits: { ...EMPTY_SPENDING_LIMITS },
+            recurringSchedules: [] as RecurringExpenseSchedule[],
             totalCents: 0,
             monthCents: 0,
           });
@@ -200,6 +260,7 @@ export class DashboardComponent {
         analyticsFilters: filters,
         availableYears: availableExpenseYears(viewModel.expenses),
         expenseListFilters,
+        filteredExpenses,
         hasExpenseListFilters: hasExpenseListFilters(expenseListFilters),
         expensePagination: paginateItems(
           filteredExpenses,
@@ -218,7 +279,14 @@ export class DashboardComponent {
     }
 
     const user = this.authService.currentUser;
-    const { description, amount, category, occurredAt } = this.expenseForm.getRawValue();
+    const {
+      description,
+      amount,
+      category,
+      occurredAt,
+      recurring,
+      frequency,
+    } = this.expenseForm.getRawValue();
 
     if (!user || amount === null) {
       return;
@@ -228,18 +296,32 @@ export class DashboardComponent {
     this.actionError.set('');
 
     try {
-      await this.expenseService.addExpense(user.uid, {
+      const draft = {
         description: description.trim(),
         amountCents: eurosToCents(amount),
         category,
         occurredAt: this.expenseService.dateToTimestamp(occurredAt),
-      });
+      };
+
+      if (recurring) {
+        await this.recurringExpenseService.addSchedule(user.uid, {
+          description: draft.description,
+          amountCents: draft.amountCents,
+          category: draft.category,
+          frequency,
+          startDate: draft.occurredAt,
+        });
+      } else {
+        await this.expenseService.addExpense(user.uid, draft);
+      }
       this.expensePage.set(1);
       this.expenseForm.reset({
         description: '',
         amount: null,
         category: 'Food',
         occurredAt: this.today(),
+        recurring: false,
+        frequency: 'monthly',
       });
     } catch (error: unknown) {
       this.actionError.set(firebaseErrorMessage(error, this.language.current()));
@@ -316,22 +398,104 @@ export class DashboardComponent {
 
   updateBreakdownView(view: 'bars' | 'pie'): void {
     this.breakdownView.set(view);
+    this.hoveredPieCategory.set(null);
   }
 
-  categoryPieGradient(categories: CategoryBreakdown[]): string {
-    let position = 0;
+  pieSegments(categories: CategoryBreakdown[]): PieSegment[] {
+    let startAngle = -90;
 
-    const segments = categories.map((item) => {
-      const start = position;
-      position += item.percentage;
-      return `${this.categoryColor(item.category)} ${start}% ${position}%`;
+    return categories.map((item, index) => {
+      const sweep = item.percentage * 3.6;
+      const endAngle =
+        index === categories.length - 1
+          ? Math.min(startAngle + sweep, 269.999)
+          : startAngle + sweep;
+      const middleAngle = startAngle + sweep / 2;
+      const segment = {
+        ...item,
+        path: this.donutSegmentPath(startAngle, endAngle),
+        offsetX: Math.cos(this.toRadians(middleAngle)) * 7,
+        offsetY: Math.sin(this.toRadians(middleAngle)) * 7,
+      };
+
+      startAngle += sweep;
+      return segment;
     });
-
-    return `conic-gradient(${segments.join(', ')})`;
   }
 
   categoryColor(category: ExpenseCategory): string {
     return this.categoryColors[category];
+  }
+
+  setHoveredPieCategory(category: CategoryBreakdown | null): void {
+    this.hoveredPieCategory.set(category);
+  }
+
+  openSettings(): void {
+    this.limitError.set('');
+    this.limitSuccess.set('');
+    this.settingsOpen.set(true);
+  }
+
+  closeSettings(): void {
+    if (!this.isSavingLimits()) {
+      this.settingsOpen.set(false);
+    }
+  }
+
+  openDeleteAccount(): void {
+    this.settingsOpen.set(false);
+    this.accountDeleteError.set('');
+    this.deleteAccountForm.reset({
+      confirmation: '',
+      password: '',
+    });
+    this.deleteAccountOpen.set(true);
+  }
+
+  cancelDeleteAccount(): void {
+    if (!this.isDeletingAccount()) {
+      this.deleteAccountOpen.set(false);
+      this.accountDeleteError.set('');
+    }
+  }
+
+  requiresAccountPassword(): boolean {
+    return this.authService.usesPasswordProvider();
+  }
+
+  async confirmDeleteAccount(): Promise<void> {
+    const user = this.authService.currentUser;
+    const { confirmation, password } = this.deleteAccountForm.getRawValue();
+
+    if (!user) {
+      return;
+    }
+
+    if (
+      confirmation.trim().toUpperCase() !== 'DELETE' ||
+      (this.requiresAccountPassword() && !password)
+    ) {
+      this.deleteAccountForm.markAllAsTouched();
+      this.accountDeleteError.set(this.t('settings.deleteValidation'));
+      return;
+    }
+
+    this.isDeletingAccount.set(true);
+    this.accountDeleteError.set('');
+
+    try {
+      await this.authService.reauthenticateCurrentUser(password);
+      await this.accountService.deleteUserData(user.uid);
+      await this.authService.deleteCurrentUser();
+      await this.router.navigateByUrl('/auth');
+    } catch (error: unknown) {
+      this.accountDeleteError.set(
+        firebaseErrorMessage(error, this.language.current()),
+      );
+    } finally {
+      this.isDeletingAccount.set(false);
+    }
   }
 
   goToExpensePage(page: number): void {
@@ -359,6 +523,148 @@ export class DashboardComponent {
   clearExpenseListFilters(): void {
     this.expenseListFilters.set({ ...EMPTY_EXPENSE_LIST_FILTERS });
     this.expensePage.set(1);
+  }
+
+  openEditExpense(expense: Expense): void {
+    this.editError.set('');
+    this.expensePendingEdit.set(expense);
+    this.editExpenseForm.reset({
+      description: expense.description,
+      amount: expense.amountCents / 100,
+      category: expense.category,
+      occurredAt: this.dateInputValue(expense.occurredAt.toDate()),
+    });
+  }
+
+  cancelEditExpense(): void {
+    if (!this.isUpdatingExpense()) {
+      this.expensePendingEdit.set(null);
+      this.editError.set('');
+    }
+  }
+
+  async saveEditedExpense(): Promise<void> {
+    if (this.editExpenseForm.invalid) {
+      this.editExpenseForm.markAllAsTouched();
+      return;
+    }
+
+    const user = this.authService.currentUser;
+    const expense = this.expensePendingEdit();
+    const { description, amount, category, occurredAt } =
+      this.editExpenseForm.getRawValue();
+
+    if (!user || !expense || amount === null) {
+      return;
+    }
+
+    this.isUpdatingExpense.set(true);
+    this.editError.set('');
+
+    try {
+      await this.expenseService.updateExpense(user.uid, expense.id, {
+        description: description.trim(),
+        amountCents: eurosToCents(amount),
+        category,
+        occurredAt: this.expenseService.dateToTimestamp(occurredAt),
+      });
+      this.expensePendingEdit.set(null);
+    } catch (error: unknown) {
+      this.editError.set(firebaseErrorMessage(error, this.language.current()));
+    } finally {
+      this.isUpdatingExpense.set(false);
+    }
+  }
+
+  openRecurringExpenses(): void {
+    this.recurringError.set('');
+    this.recurringOpen.set(true);
+  }
+
+  closeRecurringExpenses(): void {
+    if (!this.recurringActionId()) {
+      this.recurringOpen.set(false);
+    }
+  }
+
+  async toggleRecurringSchedule(
+    schedule: RecurringExpenseSchedule,
+  ): Promise<void> {
+    const user = this.authService.currentUser;
+
+    if (!user) {
+      return;
+    }
+
+    this.recurringActionId.set(schedule.id);
+    this.recurringError.set('');
+
+    try {
+      await this.recurringExpenseService.setActive(
+        user.uid,
+        schedule,
+        !schedule.active,
+      );
+    } catch (error: unknown) {
+      this.recurringError.set(
+        firebaseErrorMessage(error, this.language.current()),
+      );
+    } finally {
+      this.recurringActionId.set(null);
+    }
+  }
+
+  async deleteRecurringSchedule(
+    schedule: RecurringExpenseSchedule,
+  ): Promise<void> {
+    const user = this.authService.currentUser;
+
+    if (!user) {
+      return;
+    }
+
+    this.recurringActionId.set(schedule.id);
+    this.recurringError.set('');
+
+    try {
+      await this.recurringExpenseService.deleteSchedule(user.uid, schedule.id);
+    } catch (error: unknown) {
+      this.recurringError.set(
+        firebaseErrorMessage(error, this.language.current()),
+      );
+    } finally {
+      this.recurringActionId.set(null);
+    }
+  }
+
+  recurringFrequencyLabel(frequency: RecurringFrequency): string {
+    return this.t(`recurring.${frequency}` as TranslationKey);
+  }
+
+  exportExpenses(expenses: Expense[]): void {
+    if (!expenses.length) {
+      return;
+    }
+
+    const csv = buildExpenseCsv(
+      expenses,
+      {
+        description: this.t('export.description'),
+        amount: this.t('export.amount'),
+        category: this.t('export.category'),
+        date: this.t('export.date'),
+        createdAt: this.t('export.createdAt'),
+      },
+      (category) => this.categoryLabel(category),
+    );
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = `expense-io-${this.today()}.csv`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url));
   }
 
   requestDelete(expense: Expense): void {
@@ -431,6 +737,10 @@ export class DashboardComponent {
   handleEscape(): void {
     this.categoryMenuOpen.set(false);
     this.cancelDelete();
+    this.closeSettings();
+    this.cancelDeleteAccount();
+    this.cancelEditExpense();
+    this.closeRecurringExpenses();
   }
 
   private currentMonthTotal(expenses: Expense[]): number {
@@ -466,6 +776,40 @@ export class DashboardComponent {
     );
   }
 
+  private donutSegmentPath(startAngle: number, endAngle: number): string {
+    const outerStart = this.polarPoint(100, 100, 84, startAngle);
+    const outerEnd = this.polarPoint(100, 100, 84, endAngle);
+    const innerEnd = this.polarPoint(100, 100, 49, endAngle);
+    const innerStart = this.polarPoint(100, 100, 49, startAngle);
+    const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+
+    return [
+      `M ${outerStart.x} ${outerStart.y}`,
+      `A 84 84 0 ${largeArc} 1 ${outerEnd.x} ${outerEnd.y}`,
+      `L ${innerEnd.x} ${innerEnd.y}`,
+      `A 49 49 0 ${largeArc} 0 ${innerStart.x} ${innerStart.y}`,
+      'Z',
+    ].join(' ');
+  }
+
+  private polarPoint(
+    centerX: number,
+    centerY: number,
+    radius: number,
+    angle: number,
+  ): { x: number; y: number } {
+    const radians = this.toRadians(angle);
+
+    return {
+      x: centerX + radius * Math.cos(radians),
+      y: centerY + radius * Math.sin(radians),
+    };
+  }
+
+  private toRadians(angle: number): number {
+    return (angle * Math.PI) / 180;
+  }
+
   private updateExpenseListFilters(
     update: Partial<ExpenseListFilters>,
   ): void {
@@ -474,6 +818,53 @@ export class DashboardComponent {
       ...update,
     }));
     this.expensePage.set(1);
+  }
+
+  private recurringSyncInFlight = false;
+  private pendingRecurringSync: {
+    userId: string;
+    schedules: RecurringExpenseSchedule[];
+  } | null = null;
+
+  private async syncRecurringExpenses(
+    userId: string,
+    schedules: RecurringExpenseSchedule[],
+  ): Promise<void> {
+    if (!schedules.length) {
+      return;
+    }
+
+    if (this.recurringSyncInFlight) {
+      this.pendingRecurringSync = { userId, schedules };
+      return;
+    }
+
+    this.recurringSyncInFlight = true;
+
+    try {
+      await this.recurringExpenseService.syncDueExpenses(userId, schedules);
+    } catch (error: unknown) {
+      this.recurringError.set(
+        firebaseErrorMessage(error, this.language.current()),
+      );
+    } finally {
+      this.recurringSyncInFlight = false;
+
+      const pendingSync = this.pendingRecurringSync;
+      this.pendingRecurringSync = null;
+
+      if (pendingSync) {
+        void this.syncRecurringExpenses(
+          pendingSync.userId,
+          pendingSync.schedules,
+        );
+      }
+    }
+  }
+
+  private dateInputValue(date: Date): string {
+    const timezoneOffset = date.getTimezoneOffset() * 60_000;
+    return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 10);
   }
 
   private today(): string {

@@ -13,6 +13,26 @@
             <span>{{ vm.user.email }}</span>
           </div>
           <app-language-toggle />
+          <button
+            class="settings-button"
+            type="button"
+            [attr.aria-label]="t('settings.open')"
+            [attr.title]="t('settings.open')"
+            (click)="openSettings()"
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"></path>
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.74v.5a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"></path>
+            </svg>
+          </button>
           <button class="logout-button" type="button" (click)="logout()">
             {{ t('dashboard.signOut') }}
           </button>
@@ -55,6 +75,123 @@
         </div>
       </section>
 
+      <section class="primary-workspace">
+        <aside class="expense-form-card">
+          <div>
+            <p class="eyebrow">{{ t('expense.newEyebrow') }}</p>
+            <h2>{{ t('expense.addTitle') }}</h2>
+          </div>
+
+          <form [formGroup]="expenseForm" (ngSubmit)="addExpense()">
+            <div class="field">
+              <label for="description">{{ t('expense.description') }}</label>
+              <input
+                id="description"
+                type="text"
+                formControlName="description"
+                [placeholder]="t('expense.descriptionPlaceholder')"
+                autocomplete="off"
+              >
+            </div>
+
+            <div class="form-row">
+              <div class="field">
+                <label for="amount">{{ t('expense.amount') }}</label>
+                <div class="amount-input">
+                  <span aria-hidden="true">&euro;</span>
+                  <input
+                    id="amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    formControlName="amount"
+                    placeholder="0.00"
+                  >
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="date">{{ t('expense.date') }}</label>
+                <input id="date" type="date" formControlName="occurredAt">
+              </div>
+            </div>
+
+            <div class="field category-field" (click)="$event.stopPropagation()">
+              <label id="category-label">{{ t('expense.category') }}</label>
+              <button
+                class="category-select"
+                type="button"
+                aria-haspopup="listbox"
+                aria-labelledby="category-label selected-category"
+                [attr.aria-expanded]="categoryMenuOpen()"
+                (click)="toggleCategoryMenu($event)"
+              >
+                <span
+                  class="category-choice-icon"
+                  [attr.data-category]="expenseForm.controls.category.value"
+                >
+                  {{ categoryInitial(expenseForm.controls.category.value) }}
+                </span>
+                <span id="selected-category">
+                  {{ categoryLabel(expenseForm.controls.category.value) }}
+                </span>
+                <span class="select-chevron" aria-hidden="true"></span>
+              </button>
+
+              @if (categoryMenuOpen()) {
+                <div class="category-menu" role="listbox" aria-labelledby="category-label">
+                  @for (category of categories; track category) {
+                    <button
+                      type="button"
+                      role="option"
+                      [attr.aria-selected]="expenseForm.controls.category.value === category"
+                      [class.selected]="expenseForm.controls.category.value === category"
+                      (click)="selectCategory(category, $event)"
+                    >
+                      <span class="category-choice-icon" [attr.data-category]="category">
+                        {{ categoryInitial(category) }}
+                      </span>
+                      <span>{{ categoryLabel(category) }}</span>
+                      @if (expenseForm.controls.category.value === category) {
+                        <span class="selected-check" aria-hidden="true">&#10003;</span>
+                      }
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+
+            <label class="recurring-choice">
+              <input type="checkbox" formControlName="recurring">
+              <span class="recurring-choice-control" aria-hidden="true">
+                <span></span>
+              </span>
+              <span>
+                <strong>{{ t('expense.repeat') }}</strong>
+                <small>{{ t('expense.repeatDescription') }}</small>
+              </span>
+            </label>
+
+            @if (expenseForm.controls.recurring.value) {
+              <div class="field recurring-frequency">
+                <label for="recurring-frequency">{{ t('expense.frequency') }}</label>
+                <select id="recurring-frequency" formControlName="frequency">
+                  <option value="weekly">{{ t('recurring.weekly') }}</option>
+                  <option value="monthly">{{ t('recurring.monthly') }}</option>
+                </select>
+              </div>
+            }
+
+            @if (actionError()) {
+              <p class="error-message" role="alert">{{ actionError() }}</p>
+            }
+
+            <button class="button button-primary add-button" type="submit" [disabled]="isSaving()">
+              {{ isSaving() ? t('expense.saving') : t('expense.add') }}
+            </button>
+          </form>
+        </aside>
+
       <section class="limits-card" aria-labelledby="limits-title">
         <div class="limits-header">
           <div>
@@ -62,63 +199,10 @@
             <h2 id="limits-title">{{ t('limits.title') }}</h2>
             <p>{{ t('limits.description') }}</p>
           </div>
-
-          <form
-            class="limit-settings-form"
-            [formGroup]="spendingLimitForm"
-            (ngSubmit)="saveSpendingLimits()"
-          >
-            <div class="field">
-              <label for="daily-limit">{{ t('limits.dailyLimit') }}</label>
-              <div class="amount-input">
-                <span aria-hidden="true">&euro;</span>
-                <input
-                  id="daily-limit"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  formControlName="dailyLimit"
-                  placeholder="0.00"
-                >
-              </div>
-            </div>
-
-            <div class="field">
-              <label for="monthly-limit">{{ t('limits.monthlyLimit') }}</label>
-              <div class="amount-input">
-                <span aria-hidden="true">&euro;</span>
-                <input
-                  id="monthly-limit"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  formControlName="monthlyLimit"
-                  placeholder="0.00"
-                >
-              </div>
-            </div>
-
-            <button
-              class="button button-primary save-limits-button"
-              type="submit"
-              [disabled]="isSavingLimits()"
-            >
-              {{ isSavingLimits() ? t('limits.saving') : t('limits.save') }}
-            </button>
-          </form>
+          <button class="edit-limits-button" type="button" (click)="openSettings()">
+            {{ t('limits.edit') }}
+          </button>
         </div>
-
-        @if (spendingLimitForm.invalid && spendingLimitForm.touched) {
-          <p class="limit-validation" role="alert">{{ t('limits.invalid') }}</p>
-        }
-
-        @if (limitError()) {
-          <p class="error-message" role="alert">{{ limitError() }}</p>
-        }
-
-        @if (limitSuccess()) {
-          <p class="success-message" role="status">{{ limitSuccess() }}</p>
-        }
 
         <div class="limit-status-grid" aria-live="polite">
           <article
@@ -245,6 +329,7 @@
             }
           </article>
         </div>
+      </section>
       </section>
 
       <section class="analytics-card" aria-labelledby="analytics-title">
@@ -484,17 +569,65 @@
             @if (vm.analytics.categories.length) {
               @if (breakdownView() === 'pie') {
                 <div class="pie-chart-wrap">
-                  <div
+                  <svg
                     class="category-pie-chart"
                     role="img"
+                    viewBox="0 0 200 200"
                     [attr.aria-label]="t('analytics.pieAria')"
-                    [style.background]="categoryPieGradient(vm.analytics.categories)"
                   >
-                    <span>
-                      <strong>{{ vm.analytics.categories.length }}</strong>
-                      {{ t('analytics.categories') }}
-                    </span>
-                  </div>
+                    @for (
+                      segment of pieSegments(vm.analytics.categories);
+                      track segment.category
+                    ) {
+                      <g
+                        class="pie-slice"
+                        tabindex="0"
+                        [class.active]="
+                          hoveredPieCategory()?.category === segment.category
+                        "
+                        [style.--slice-x]="segment.offsetX + 'px'"
+                        [style.--slice-y]="segment.offsetY + 'px'"
+                        (mouseenter)="setHoveredPieCategory(segment)"
+                        (mouseleave)="setHoveredPieCategory(null)"
+                        (focus)="setHoveredPieCategory(segment)"
+                        (blur)="setHoveredPieCategory(null)"
+                      >
+                        <path
+                          [attr.d]="segment.path"
+                          [attr.fill]="categoryColor(segment.category)"
+                        >
+                          <title>
+                            {{ categoryLabel(segment.category) }}:
+                            {{ segment.percentage | number: '1.0-1' }}%
+                          </title>
+                        </path>
+                      </g>
+                    }
+
+                    <circle class="pie-center" cx="100" cy="100" r="43"></circle>
+
+                    @if (hoveredPieCategory(); as hovered) {
+                      <text class="pie-center-label" x="100" y="89">
+                        {{ categoryLabel(hovered.category) }}
+                      </text>
+                      <text class="pie-center-value" x="100" y="108">
+                        {{
+                          hovered.amountCents / 100
+                            | currency: 'EUR' : 'symbol' : '1.0-0' : language.locale()
+                        }}
+                      </text>
+                      <text class="pie-center-percent" x="100" y="124">
+                        {{ hovered.percentage | number: '1.0-1' }}%
+                      </text>
+                    } @else {
+                      <text class="pie-center-value" x="100" y="99">
+                        {{ vm.analytics.categories.length }}
+                      </text>
+                      <text class="pie-center-percent" x="100" y="116">
+                        {{ t('analytics.categories') }}
+                      </text>
+                    }
+                  </svg>
                 </div>
               }
 
@@ -551,118 +684,51 @@
         </div>
       </section>
 
-      <section class="workspace">
-        <aside class="expense-form-card">
-          <div>
-            <p class="eyebrow">{{ t('expense.newEyebrow') }}</p>
-            <h2>{{ t('expense.addTitle') }}</h2>
-          </div>
-
-          <form [formGroup]="expenseForm" (ngSubmit)="addExpense()">
-            <div class="field">
-              <label for="description">{{ t('expense.description') }}</label>
-              <input
-                id="description"
-                type="text"
-                formControlName="description"
-                [placeholder]="t('expense.descriptionPlaceholder')"
-                autocomplete="off"
-              >
-            </div>
-
-            <div class="form-row">
-              <div class="field">
-                <label for="amount">{{ t('expense.amount') }}</label>
-                <div class="amount-input">
-                  <span aria-hidden="true">&euro;</span>
-                  <input
-                    id="amount"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    formControlName="amount"
-                    placeholder="0.00"
-                  >
-                </div>
-              </div>
-
-              <div class="field">
-                <label for="date">{{ t('expense.date') }}</label>
-                <input id="date" type="date" formControlName="occurredAt">
-              </div>
-            </div>
-
-            <div class="field category-field" (click)="$event.stopPropagation()">
-              <label id="category-label">{{ t('expense.category') }}</label>
-              <button
-                class="category-select"
-                type="button"
-                aria-haspopup="listbox"
-                aria-labelledby="category-label selected-category"
-                [attr.aria-expanded]="categoryMenuOpen()"
-                (click)="toggleCategoryMenu($event)"
-              >
-                <span
-                  class="category-choice-icon"
-                  [attr.data-category]="expenseForm.controls.category.value"
-                >
-                  {{ categoryInitial(expenseForm.controls.category.value) }}
-                </span>
-                <span id="selected-category">
-                  {{ categoryLabel(expenseForm.controls.category.value) }}
-                </span>
-                <span class="select-chevron" aria-hidden="true"></span>
-              </button>
-
-              @if (categoryMenuOpen()) {
-                <div class="category-menu" role="listbox" aria-labelledby="category-label">
-                  @for (category of categories; track category) {
-                    <button
-                      type="button"
-                      role="option"
-                      [attr.aria-selected]="expenseForm.controls.category.value === category"
-                      [class.selected]="expenseForm.controls.category.value === category"
-                      (click)="selectCategory(category, $event)"
-                    >
-                      <span class="category-choice-icon" [attr.data-category]="category">
-                        {{ categoryInitial(category) }}
-                      </span>
-                      <span>{{ categoryLabel(category) }}</span>
-                      @if (expenseForm.controls.category.value === category) {
-                        <span class="selected-check" aria-hidden="true">&#10003;</span>
-                      }
-                    </button>
-                  }
-                </div>
-              }
-            </div>
-
-            @if (actionError()) {
-              <p class="error-message" role="alert">{{ actionError() }}</p>
-            }
-
-            <button class="button button-primary add-button" type="submit" [disabled]="isSaving()">
-              {{ isSaving() ? t('expense.saving') : t('expense.add') }}
-            </button>
-          </form>
-        </aside>
-
-        <section class="expense-list-card" aria-labelledby="expenses-title">
+      <section
+        class="expense-list-card activity-card"
+        aria-labelledby="expenses-title"
+      >
           <div class="list-header">
             <div>
               <p class="eyebrow">{{ t('expense.activity') }}</p>
               <h2 id="expenses-title">{{ t('expense.recent') }}</h2>
               <small class="list-order">{{ t('expense.newestAdded') }}</small>
             </div>
-            <span
-              class="expense-count"
-              [class.filtered]="vm.hasExpenseListFilters"
-            >
-              {{ vm.expensePagination.totalItems }}
-              @if (vm.hasExpenseListFilters) {
-                <small>/ {{ vm.expenses.length }}</small>
-              }
-            </span>
+            <div class="activity-actions">
+              <button
+                class="activity-tool-button"
+                type="button"
+                (click)="openRecurringExpenses()"
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M20 7h-5V2"></path>
+                  <path d="M20 7a8 8 0 1 0 1.4 8"></path>
+                </svg>
+                <span>{{ t('recurring.manage') }}</span>
+              </button>
+              <button
+                class="activity-tool-button"
+                type="button"
+                [disabled]="!vm.filteredExpenses.length"
+                (click)="exportExpenses(vm.filteredExpenses)"
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M12 3v12"></path>
+                  <path d="m7 10 5 5 5-5"></path>
+                  <path d="M5 21h14"></path>
+                </svg>
+                <span>{{ t('export.csv') }}</span>
+              </button>
+              <span
+                class="expense-count"
+                [class.filtered]="vm.hasExpenseListFilters"
+              >
+                {{ vm.expensePagination.totalItems }}
+                @if (vm.hasExpenseListFilters) {
+                  <small>/ {{ vm.expenses.length }}</small>
+                }
+              </span>
+            </div>
           </div>
 
           @if (loadError()) {
@@ -752,16 +818,31 @@
                         | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
                     }}
                   </strong>
-                  <button
-                    class="delete-button"
-                    type="button"
-                    [attr.aria-label]="
-                      t('expense.deleteAria', { description: expense.description })
-                    "
-                    (click)="requestDelete(expense)"
-                  >
-                    <span aria-hidden="true">&times;</span>
-                  </button>
+                  <div class="expense-item-actions">
+                    <button
+                      class="edit-expense-button"
+                      type="button"
+                      [attr.aria-label]="
+                        t('expense.editAria', { description: expense.description })
+                      "
+                      (click)="openEditExpense(expense)"
+                    >
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <path d="M12 20h9"></path>
+                        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path>
+                      </svg>
+                    </button>
+                    <button
+                      class="delete-button"
+                      type="button"
+                      [attr.aria-label]="
+                        t('expense.deleteAria', { description: expense.description })
+                      "
+                      (click)="requestDelete(expense)"
+                    >
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
                 </article>
               }
             </div>
@@ -845,7 +926,6 @@
               <p>{{ t('expense.emptyDescription') }}</p>
             </div>
           }
-        </section>
       </section>
     }
   } @else {
@@ -855,6 +935,415 @@
     </div>
   }
 </main>
+
+@if (settingsOpen()) {
+  <div class="modal-backdrop" (click)="closeSettings()">
+    <section
+      class="settings-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="settings-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="settings-modal-header">
+        <div>
+          <p class="eyebrow">{{ t('settings.eyebrow') }}</p>
+          <h2 id="settings-title">{{ t('settings.title') }}</h2>
+        </div>
+        <button
+          class="modal-close-button"
+          type="button"
+          [attr.aria-label]="t('settings.close')"
+          (click)="closeSettings()"
+        >
+          &times;
+        </button>
+      </div>
+
+      <section
+        class="settings-section appearance-settings"
+        aria-labelledby="appearance-settings-title"
+      >
+        <div>
+          <h3 id="appearance-settings-title">{{ t('settings.appearance') }}</h3>
+          <p>{{ t('settings.appearanceDescription') }}</p>
+        </div>
+
+        <button
+          class="theme-toggle"
+          type="button"
+          role="switch"
+          [attr.aria-checked]="theme.isDark()"
+          [attr.aria-label]="t('settings.darkMode')"
+          (click)="theme.toggle()"
+        >
+          <span class="theme-toggle-copy">
+            <span>{{ t('settings.darkMode') }}</span>
+            <span class="theme-toggle-state">
+              {{ theme.isDark() ? t('settings.darkModeOn') : t('settings.darkModeOff') }}
+            </span>
+          </span>
+          <span class="theme-toggle-track" aria-hidden="true">
+            <span></span>
+          </span>
+        </button>
+      </section>
+
+      <section class="settings-section" aria-labelledby="limit-settings-title">
+        <div>
+          <h3 id="limit-settings-title">{{ t('limits.title') }}</h3>
+          <p>{{ t('limits.description') }}</p>
+        </div>
+
+        <form
+          class="limit-settings-form"
+          [formGroup]="spendingLimitForm"
+          (ngSubmit)="saveSpendingLimits()"
+        >
+          <div class="field">
+            <label for="daily-limit-settings">{{ t('limits.dailyLimit') }}</label>
+            <div class="amount-input">
+              <span aria-hidden="true">&euro;</span>
+              <input
+                id="daily-limit-settings"
+                type="number"
+                min="0.01"
+                step="0.01"
+                formControlName="dailyLimit"
+                placeholder="0.00"
+              >
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="monthly-limit-settings">{{ t('limits.monthlyLimit') }}</label>
+            <div class="amount-input">
+              <span aria-hidden="true">&euro;</span>
+              <input
+                id="monthly-limit-settings"
+                type="number"
+                min="0.01"
+                step="0.01"
+                formControlName="monthlyLimit"
+                placeholder="0.00"
+              >
+            </div>
+          </div>
+
+          @if (spendingLimitForm.invalid && spendingLimitForm.touched) {
+            <p class="limit-validation" role="alert">{{ t('limits.invalid') }}</p>
+          }
+
+          @if (limitError()) {
+            <p class="error-message" role="alert">{{ limitError() }}</p>
+          }
+
+          @if (limitSuccess()) {
+            <p class="success-message" role="status">{{ limitSuccess() }}</p>
+          }
+
+          <button
+            class="button button-primary save-limits-button"
+            type="submit"
+            [disabled]="isSavingLimits()"
+          >
+            {{ isSavingLimits() ? t('limits.saving') : t('limits.save') }}
+          </button>
+        </form>
+      </section>
+
+      <section class="danger-zone" aria-labelledby="danger-zone-title">
+        <div>
+          <h3 id="danger-zone-title">{{ t('settings.dangerZone') }}</h3>
+          <p>{{ t('settings.deleteDescription') }}</p>
+        </div>
+        <button
+          class="button delete-account-button"
+          type="button"
+          (click)="openDeleteAccount()"
+        >
+          {{ t('settings.deleteAccount') }}
+        </button>
+      </section>
+    </section>
+  </div>
+}
+
+@if (deleteAccountOpen()) {
+  <div class="modal-backdrop" (click)="cancelDeleteAccount()">
+    <section
+      class="delete-account-modal"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="delete-account-title"
+      aria-describedby="delete-account-description"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="delete-modal-icon" aria-hidden="true">!</div>
+      <div class="delete-modal-copy">
+        <p class="eyebrow">{{ t('settings.deleteEyebrow') }}</p>
+        <h2 id="delete-account-title">{{ t('settings.deleteTitle') }}</h2>
+        <p id="delete-account-description">
+          {{ t('settings.deleteWarning') }}
+        </p>
+      </div>
+
+      <form
+        class="delete-account-form"
+        [formGroup]="deleteAccountForm"
+        (ngSubmit)="confirmDeleteAccount()"
+      >
+        <div class="field">
+          <label for="delete-confirmation">{{ t('settings.typeDelete') }}</label>
+          <input
+            id="delete-confirmation"
+            type="text"
+            formControlName="confirmation"
+            autocomplete="off"
+            placeholder="DELETE"
+          >
+        </div>
+
+        @if (requiresAccountPassword()) {
+          <div class="field">
+            <label for="delete-password">{{ t('settings.currentPassword') }}</label>
+            <input
+              id="delete-password"
+              type="password"
+              formControlName="password"
+              autocomplete="current-password"
+            >
+          </div>
+        } @else {
+          <p class="reauth-note">{{ t('settings.googleReauth') }}</p>
+        }
+
+        @if (accountDeleteError()) {
+          <p class="error-message" role="alert">{{ accountDeleteError() }}</p>
+        }
+
+        <div class="modal-actions">
+          <button
+            class="button button-secondary"
+            type="button"
+            [disabled]="isDeletingAccount()"
+            (click)="cancelDeleteAccount()"
+          >
+            {{ t('settings.cancel') }}
+          </button>
+          <button
+            class="button confirm-delete-button"
+            type="submit"
+            [disabled]="isDeletingAccount()"
+          >
+            {{
+              isDeletingAccount()
+                ? t('settings.deletingAccount')
+                : t('settings.confirmDelete')
+            }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (expensePendingEdit(); as expense) {
+  <div class="modal-backdrop" (click)="cancelEditExpense()">
+    <section
+      class="edit-expense-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="edit-expense-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="settings-modal-header">
+        <div>
+          <p class="eyebrow">{{ t('edit.eyebrow') }}</p>
+          <h2 id="edit-expense-title">{{ t('edit.title') }}</h2>
+          <p class="modal-description">{{ t('edit.description') }}</p>
+        </div>
+        <button
+          class="modal-close-button"
+          type="button"
+          [attr.aria-label]="t('edit.cancel')"
+          (click)="cancelEditExpense()"
+        >
+          &times;
+        </button>
+      </div>
+
+      <form
+        class="edit-expense-form"
+        [formGroup]="editExpenseForm"
+        (ngSubmit)="saveEditedExpense()"
+      >
+        <div class="field edit-description-field">
+          <label for="edit-description">{{ t('expense.description') }}</label>
+          <input
+            id="edit-description"
+            type="text"
+            formControlName="description"
+            autocomplete="off"
+          >
+        </div>
+        <div class="field">
+          <label for="edit-amount">{{ t('expense.amount') }}</label>
+          <div class="amount-input">
+            <span aria-hidden="true">&euro;</span>
+            <input
+              id="edit-amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              formControlName="amount"
+            >
+          </div>
+        </div>
+        <div class="field">
+          <label for="edit-date">{{ t('expense.date') }}</label>
+          <input id="edit-date" type="date" formControlName="occurredAt">
+        </div>
+        <div class="field edit-category-field">
+          <label for="edit-category">{{ t('expense.category') }}</label>
+          <select id="edit-category" formControlName="category">
+            @for (category of categories; track category) {
+              <option [value]="category">{{ categoryLabel(category) }}</option>
+            }
+          </select>
+        </div>
+
+        @if (editError()) {
+          <p class="error-message edit-form-message" role="alert">{{ editError() }}</p>
+        }
+
+        <div class="modal-actions edit-form-actions">
+          <button
+            class="button button-secondary"
+            type="button"
+            [disabled]="isUpdatingExpense()"
+            (click)="cancelEditExpense()"
+          >
+            {{ t('edit.cancel') }}
+          </button>
+          <button
+            class="button button-primary"
+            type="submit"
+            [disabled]="isUpdatingExpense()"
+          >
+            {{ isUpdatingExpense() ? t('edit.saving') : t('edit.save') }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (recurringOpen()) {
+  <div class="modal-backdrop" (click)="closeRecurringExpenses()">
+    <section
+      class="recurring-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="recurring-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="settings-modal-header">
+        <div>
+          <p class="eyebrow">{{ t('recurring.eyebrow') }}</p>
+          <h2 id="recurring-title">{{ t('recurring.title') }}</h2>
+          <p class="modal-description">{{ t('recurring.description') }}</p>
+        </div>
+        <button
+          class="modal-close-button"
+          type="button"
+          [attr.aria-label]="t('settings.close')"
+          (click)="closeRecurringExpenses()"
+        >
+          &times;
+        </button>
+      </div>
+
+      @if (recurringError()) {
+        <p class="error-message" role="alert">{{ recurringError() }}</p>
+      }
+
+      @if (recurringSchedules().length) {
+        <div class="recurring-list">
+          @for (schedule of recurringSchedules(); track schedule.id) {
+            <article class="recurring-item" [class.paused]="!schedule.active">
+              <span
+                class="category-choice-icon"
+                [attr.data-category]="schedule.category"
+              >
+                {{ categoryInitial(schedule.category) }}
+              </span>
+              <div class="recurring-item-copy">
+                <div>
+                  <strong>{{ schedule.description }}</strong>
+                  <span
+                    class="recurring-status"
+                    [class.active]="schedule.active"
+                  >
+                    {{
+                      schedule.active
+                        ? t('recurring.active')
+                        : t('recurring.paused')
+                    }}
+                  </span>
+                </div>
+                <span>
+                  {{ categoryLabel(schedule.category) }} &middot;
+                  {{ recurringFrequencyLabel(schedule.frequency) }} &middot;
+                  {{ t('recurring.next') }}
+                  {{
+                    timestampToDate(schedule.nextOccurrenceAt)
+                      | date: 'd MMM y' : undefined : language.locale()
+                  }}
+                </span>
+              </div>
+              <strong class="recurring-amount">
+                {{
+                  schedule.amountCents / 100
+                    | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                }}
+              </strong>
+              <div class="recurring-actions">
+                <button
+                  type="button"
+                  [disabled]="recurringActionId() === schedule.id"
+                  (click)="toggleRecurringSchedule(schedule)"
+                >
+                  {{
+                    recurringActionId() === schedule.id
+                      ? t('recurring.working')
+                      : schedule.active
+                        ? t('recurring.pause')
+                        : t('recurring.resume')
+                  }}
+                </button>
+                <button
+                  class="remove-recurring-button"
+                  type="button"
+                  [disabled]="recurringActionId() === schedule.id"
+                  (click)="deleteRecurringSchedule(schedule)"
+                >
+                  {{ t('recurring.remove') }}
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+      } @else {
+        <div class="recurring-empty">
+          <span aria-hidden="true">&#8635;</span>
+          <strong>{{ t('recurring.emptyTitle') }}</strong>
+          <p>{{ t('recurring.emptyDescription') }}</p>
+        </div>
+      }
+    </section>
+  </div>
+}
 
 @if (expensePendingDelete(); as expense) {
   <div class="modal-backdrop" (click)="cancelDelete()">

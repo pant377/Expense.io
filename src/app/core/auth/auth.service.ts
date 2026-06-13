@@ -1,9 +1,13 @@
 import { Injectable, NgZone, inject } from '@angular/core';
 import {
+  EmailAuthProvider,
   GoogleAuthProvider,
   User,
   createUserWithEmailAndPassword,
+  deleteUser,
   onAuthStateChanged,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -62,6 +66,57 @@ export class AuthService {
 
   async logout(): Promise<void> {
     await signOut(firebaseAuth);
+  }
+
+  usesPasswordProvider(): boolean {
+    const providers = firebaseAuth.currentUser?.providerData ?? [];
+    const usesGoogle = providers.some(
+      (provider) => provider.providerId === GoogleAuthProvider.PROVIDER_ID,
+    );
+
+    return (
+      !usesGoogle &&
+      providers.some(
+        (provider) => provider.providerId === EmailAuthProvider.PROVIDER_ID,
+      )
+    );
+  }
+
+  async reauthenticateCurrentUser(password = ''): Promise<void> {
+    const user = firebaseAuth.currentUser;
+
+    if (!user) {
+      throw { code: 'auth/user-not-found' };
+    }
+
+    const usesGoogle = user.providerData.some(
+      (provider) => provider.providerId === GoogleAuthProvider.PROVIDER_ID,
+    );
+
+    if (usesGoogle) {
+      await reauthenticateWithPopup(user, new GoogleAuthProvider());
+      return;
+    }
+
+    if (user.email && this.usesPasswordProvider()) {
+      await reauthenticateWithCredential(
+        user,
+        EmailAuthProvider.credential(user.email, password),
+      );
+      return;
+    }
+
+    throw { code: 'auth/requires-recent-login' };
+  }
+
+  async deleteCurrentUser(): Promise<void> {
+    const user = firebaseAuth.currentUser;
+
+    if (!user) {
+      return;
+    }
+
+    await deleteUser(user);
   }
 
   private async syncGoogleProfile(user: User): Promise<void> {

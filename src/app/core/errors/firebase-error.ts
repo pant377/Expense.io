@@ -10,6 +10,8 @@ const FIREBASE_ERROR_MESSAGES: Record<AppLanguage, Record<string, string>> = {
     'auth/popup-blocked':
       'Your browser blocked the Google sign-in window. Allow popups and try again.',
     'auth/popup-closed-by-user': 'Google sign-in was cancelled.',
+    'auth/requires-recent-login':
+      'Please sign in again before deleting your account.',
     'auth/too-many-requests': 'Too many attempts. Please wait and try again.',
     'auth/unauthorized-domain': 'Google sign-in is not authorized for this domain.',
     'auth/weak-password': 'Use a password with at least 6 characters.',
@@ -27,6 +29,8 @@ const FIREBASE_ERROR_MESSAGES: Record<AppLanguage, Record<string, string>> = {
     'auth/popup-blocked':
       'Ο browser απέκλεισε το παράθυρο σύνδεσης Google. Επίτρεψε τα αναδυόμενα παράθυρα και δοκίμασε ξανά.',
     'auth/popup-closed-by-user': 'Η σύνδεση μέσω Google ακυρώθηκε.',
+    'auth/requires-recent-login':
+      'Συνδέσου ξανά πριν διαγράψεις τον λογαριασμό σου.',
     'auth/too-many-requests': 'Έγιναν πολλές προσπάθειες. Περίμενε λίγο και δοκίμασε ξανά.',
     'auth/unauthorized-domain':
       'Η σύνδεση Google δεν είναι εξουσιοδοτημένη για αυτό το domain.',

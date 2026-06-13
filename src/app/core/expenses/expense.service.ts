@@ -7,6 +7,7 @@ import {
   doc,
   onSnapshot,
   serverTimestamp,
+  updateDoc,
 } from 'firebase/firestore';
 import { Observable } from 'rxjs';
 
@@ -50,6 +51,17 @@ export class ExpenseService {
 
   async deleteExpense(userId: string, expenseId: string): Promise<void> {
     await deleteDoc(doc(firestore, `users/${userId}/expenses/${expenseId}`));
+  }
+
+  async updateExpense(
+    userId: string,
+    expenseId: string,
+    expense: ExpenseDraft,
+  ): Promise<void> {
+    await updateDoc(doc(firestore, `users/${userId}/expenses/${expenseId}`), {
+      ...expense,
+      updatedAt: serverTimestamp(),
+    });
   }
 
   dateToTimestamp(date: string): Timestamp {

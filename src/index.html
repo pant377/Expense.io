@@ -11,6 +11,23 @@
     >
     <meta name="theme-color" content="#075e58">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=3">
+    <script>
+      (() => {
+        try {
+          const storedTheme = localStorage.getItem('expense-io-theme');
+          const theme =
+            storedTheme === 'light' || storedTheme === 'dark'
+              ? storedTheme
+              : matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light';
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+        } catch {
+          // Angular applies the theme when browser storage is unavailable.
+        }
+      })();
+    </script>
   </head>
   <body>
     <app-root></app-root>

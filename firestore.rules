@@ -95,6 +95,52 @@ service cloud.firestore {
         && request.resource.data.updatedAt is timestamp;
     }
 
+    function validRecurringExpense() {
+      return request.resource.data.keys().hasOnly([
+          'description',
+          'amountCents',
+          'category',
+          'frequency',
+          'startDate',
+          'nextOccurrenceAt',
+          'active',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'description',
+          'amountCents',
+          'category',
+          'frequency',
+          'startDate',
+          'nextOccurrenceAt',
+          'active',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.description.size() <= 120
+        && request.resource.data.amountCents is int
+        && request.resource.data.amountCents > 0
+        && request.resource.data.amountCents <= 100000000000
+        && request.resource.data.category in [
+          'Food',
+          'Transport',
+          'Home',
+          'Health',
+          'Leisure',
+          'Subscriptions',
+          'Other'
+        ]
+        && request.resource.data.frequency in ['weekly', 'monthly']
+        && request.resource.data.startDate is timestamp
+        && request.resource.data.nextOccurrenceAt is timestamp
+        && request.resource.data.active is bool
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp;
+    }
+
     match /users/{userId} {
       allow read, delete: if signedInAs(userId);
       allow create: if signedInAs(userId) && validProfile();
@@ -110,10 +156,18 @@ service cloud.firestore {
           && request.resource.data.createdAt == resource.data.createdAt;
       }
 
+      match /recurring-expenses/{scheduleId} {
+        allow read, delete: if signedInAs(userId);
+        allow create: if signedInAs(userId) && validRecurringExpense();
+        allow update: if signedInAs(userId)
+          && validRecurringExpense()
+          && request.resource.data.createdAt == resource.data.createdAt;
+      }
+
       match /settings/spending-limits {
         allow read: if signedInAs(userId);
         allow create, update: if signedInAs(userId) && validSpendingLimits();
-        allow delete: if false;
+        allow delete: if signedInAs(userId);
       }
     }
 
