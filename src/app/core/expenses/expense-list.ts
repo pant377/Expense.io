@@ -1,10 +1,19 @@
-import { Expense, ExpenseCategory } from './expense.model';
+import {
+  Expense,
+  ExpenseCategory,
+  PaymentMethod,
+  TransactionType,
+} from './expense.model';
 
 export type ExpenseListCategory = ExpenseCategory | 'All';
+export type ExpenseListTransactionType = TransactionType | 'All';
+export type ExpenseListPaymentMethod = PaymentMethod | 'All';
 
 export interface ExpenseListFilters {
   search: string;
   category: ExpenseListCategory;
+  transactionType: ExpenseListTransactionType;
+  paymentMethod: ExpenseListPaymentMethod;
   dateFrom: string;
   dateTo: string;
 }
@@ -12,6 +21,8 @@ export interface ExpenseListFilters {
 export const EMPTY_EXPENSE_LIST_FILTERS: ExpenseListFilters = {
   search: '',
   category: 'All',
+  transactionType: 'All',
+  paymentMethod: 'All',
   dateFrom: '',
   dateTo: '',
 };
@@ -29,10 +40,23 @@ export function buildExpenseList(
         !search || normalizeSearch(expense.description).includes(search);
       const matchesCategory =
         filters.category === 'All' || expense.category === filters.category;
+      const matchesTransactionType =
+        filters.transactionType === 'All' ||
+        expense.transactionType === filters.transactionType;
+      const matchesPaymentMethod =
+        filters.paymentMethod === 'All' ||
+        expense.paymentMethod === filters.paymentMethod;
       const matchesDateFrom = !filters.dateFrom || occurredOn >= filters.dateFrom;
       const matchesDateTo = !filters.dateTo || occurredOn <= filters.dateTo;
 
-      return matchesSearch && matchesCategory && matchesDateFrom && matchesDateTo;
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesTransactionType &&
+        matchesPaymentMethod &&
+        matchesDateFrom &&
+        matchesDateTo
+      );
     })
     .sort((left, right) => {
       const createdDifference = createdAtMillis(right) - createdAtMillis(left);
@@ -43,8 +67,10 @@ export function buildExpenseList(
 
 export function hasExpenseListFilters(filters: ExpenseListFilters): boolean {
   return Boolean(
-    filters.search.trim() ||
+      filters.search.trim() ||
       filters.category !== 'All' ||
+      filters.transactionType !== 'All' ||
+      filters.paymentMethod !== 'All' ||
       filters.dateFrom ||
       filters.dateTo,
   );

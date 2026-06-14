@@ -162,6 +162,24 @@ a {
   box-shadow: 0 0 0 3px rgba(10, 124, 116, 0.12);
 }
 
+.field.field-invalid label {
+  color: var(--danger);
+}
+
+.field.field-invalid input,
+.field.field-invalid select {
+  border-color: var(--danger);
+  background: #fff8f7;
+  box-shadow: 0 0 0 3px rgba(200, 68, 68, 0.1);
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .error-message {
   padding: 0.75rem 0.9rem;
   color: #922f2f;
@@ -463,8 +481,73 @@ a {
 .limit-settings-form .save-limits-button,
 .limit-settings-form .error-message,
 .limit-settings-form .success-message,
-.limit-settings-form .limit-validation {
+.limit-settings-form .limit-validation,
+.limit-settings-form .limit-income-toggle {
   grid-column: 1 / -1;
+}
+
+.limit-income-toggle {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.85rem;
+  color: var(--ink);
+  background: #f5f9f8;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.limit-income-toggle > input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.limit-income-toggle-control {
+  display: flex;
+  width: 44px;
+  height: 25px;
+  align-items: center;
+  padding: 3px;
+  background: #c8d3d8;
+  border-radius: 99px;
+  transition: background 160ms ease;
+}
+
+.limit-income-toggle-control > span {
+  width: 19px;
+  height: 19px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(17, 36, 58, 0.2);
+  transition: transform 160ms ease;
+}
+
+.limit-income-toggle > input:checked + .limit-income-toggle-control {
+  background: var(--primary);
+}
+
+.limit-income-toggle > input:checked + .limit-income-toggle-control > span {
+  transform: translateX(19px);
+}
+
+.limit-income-toggle > input:focus-visible + .limit-income-toggle-control {
+  outline: 3px solid rgba(10, 124, 116, 0.18);
+  outline-offset: 2px;
+}
+
+.limit-income-toggle > span:last-child {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.limit-income-toggle small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
 }
 
 .limit-validation {
@@ -595,23 +678,23 @@ a {
 
 .activity-tool-button {
   display: inline-flex;
-  min-height: 36px;
+  min-height: 42px;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0.45rem 0.65rem;
+  padding: 0.55rem 0.8rem;
   color: var(--primary-dark);
   background: #eef6f4;
   border: 1px solid #d3e5e2;
   border-radius: 10px;
-  font-size: 0.74rem;
+  font-size: 0.82rem;
   font-weight: 800;
 }
 
 .activity-tool-button svg,
 .edit-expense-button svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
@@ -637,13 +720,136 @@ a {
 
 .edit-expense-button {
   display: grid;
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   place-items: center;
   color: var(--muted);
   background: transparent;
   border: 0;
   border-radius: 50%;
+}
+
+app-dashboard .expense-item-actions .delete-button {
+  width: 38px;
+  height: 38px;
+  font-size: 1.5rem;
+}
+
+app-dashboard .expense-item-actions {
+  gap: 0.25rem;
+}
+
+app-dashboard .expense-copy {
+  gap: 0.45rem;
+}
+
+app-dashboard .transaction-metadata {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+}
+
+app-dashboard .expense-copy .transaction-badge {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  padding: 0.26rem 0.58rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+app-dashboard .expense-copy .type-badge[data-type="income"] {
+  color: #087168;
+  background: #dff5ef;
+  border-color: #a9dfd4;
+}
+
+app-dashboard .expense-copy .type-badge[data-type="expense"] {
+  color: #a0443b;
+  background: #fbe8e5;
+  border-color: #efc1bb;
+}
+
+app-dashboard .expense-copy .payment-badge[data-payment="cash"] {
+  color: #84570a;
+  background: #fff2cf;
+  border-color: #efd99e;
+}
+
+app-dashboard .expense-copy .payment-badge[data-payment="card"] {
+  color: #5d4180;
+  background: #eee7f8;
+  border-color: #d8c7eb;
+}
+
+app-dashboard .expense-copy .payment-badge[data-payment="bankTransfer"] {
+  color: #205a83;
+  background: #e4f1fa;
+  border-color: #c1dced;
+}
+
+app-dashboard .expense-copy .payment-badge[data-payment="unspecified"] {
+  color: #596774;
+  background: #edf1f3;
+  border-color: #d7dfe3;
+}
+
+app-dashboard .expense-copy .category-badge {
+  color: #7a4b06;
+  background: #fff0d5;
+  border-color: #efd5a5;
+}
+
+app-dashboard .expense-copy .category-badge[data-category="Transport"],
+app-dashboard .expense-copy .category-badge[data-category="Subscriptions"] {
+  color: #5d4180;
+  background: #eee7f8;
+  border-color: #d8c7eb;
+}
+
+app-dashboard .expense-copy .category-badge[data-category="Home"],
+app-dashboard .expense-copy .category-badge[data-category="Health"] {
+  color: #205a83;
+  background: #e4f1fa;
+  border-color: #c1dced;
+}
+
+app-dashboard .expense-copy .category-badge[data-category="Leisure"],
+app-dashboard .expense-copy .category-badge[data-category="Other"],
+app-dashboard .expense-copy .category-badge[data-category="Investments"] {
+  color: #286850;
+  background: #e4f3ed;
+  border-color: #bfdfd2;
+}
+
+app-dashboard .expense-copy .category-badge[data-category="Vehicle"] {
+  color: #9b4f1e;
+  background: #fbe9dc;
+  border-color: #efc9ae;
+}
+
+app-dashboard .expense-copy .category-badge[data-category="FinancialExpenses"] {
+  color: #984039;
+  background: #f9e5e3;
+  border-color: #ebbfbb;
+}
+
+app-dashboard .expense-copy .category-badge[data-category="Gift"] {
+  color: #a33d70;
+  background: #f9e2ee;
+  border-color: #edbad4;
+}
+
+app-dashboard .expense-copy .transaction-date {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .edit-expense-button:hover {
@@ -793,6 +999,120 @@ a {
   line-height: 1.5;
 }
 
+app-dashboard .summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+app-dashboard .income-summary {
+  border-color: rgba(35, 143, 133, 0.24);
+  background: #edf9f6;
+}
+
+app-dashboard .income-summary strong,
+app-dashboard .income-amount,
+app-dashboard .positive-money {
+  color: #087168;
+}
+
+app-dashboard .negative-money {
+  color: var(--danger);
+}
+
+app-dashboard .transaction-type-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.3rem;
+  padding: 0.25rem;
+  background: #edf3f2;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+app-dashboard .transaction-type-toggle button {
+  min-height: 40px;
+  padding: 0.55rem 0.75rem;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  font-weight: 800;
+}
+
+app-dashboard .transaction-type-toggle button.active {
+  color: white;
+  background: var(--primary);
+  box-shadow: 0 5px 14px rgba(10, 124, 116, 0.2);
+}
+
+app-dashboard .category-choice-icon app-category-icon,
+app-dashboard .category-icon app-category-icon {
+  font-size: 1.05rem;
+}
+
+app-dashboard .category-menu {
+  max-height: min(420px, 55vh);
+  overflow-y: auto;
+}
+
+app-dashboard .category-choice-icon[data-category="Vehicle"],
+app-dashboard .category-icon[data-category="Vehicle"] {
+  color: #9b4f1e;
+  background: #fbe9dc;
+}
+
+app-dashboard .category-choice-icon[data-category="FinancialExpenses"],
+app-dashboard .category-icon[data-category="FinancialExpenses"] {
+  color: #984039;
+  background: #f9e5e3;
+}
+
+app-dashboard .category-choice-icon[data-category="Investments"],
+app-dashboard .category-icon[data-category="Investments"] {
+  color: #087168;
+  background: #dff2ee;
+}
+
+app-dashboard .category-choice-icon[data-category="Gift"],
+app-dashboard .category-icon[data-category="Gift"] {
+  color: #a33d70;
+  background: #f9e2ee;
+}
+
+app-dashboard .expense-list {
+  gap: 0.65rem;
+}
+
+app-dashboard .expense-item {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  background: linear-gradient(90deg, rgba(200, 68, 68, 0.075), rgba(200, 68, 68, 0.018));
+  border: 1px solid rgba(200, 68, 68, 0.16);
+  border-radius: 16px;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+app-dashboard .expense-item:hover {
+  border-color: rgba(200, 68, 68, 0.28);
+  transform: translateY(-1px);
+}
+
+app-dashboard .expense-item[data-type="expense"] .expense-amount {
+  color: #b84b43;
+}
+
+app-dashboard .expense-item.income-transaction {
+  background: linear-gradient(90deg, rgba(35, 143, 133, 0.1), rgba(35, 143, 133, 0.025));
+  border: 1px solid rgba(35, 143, 133, 0.18);
+}
+
+app-dashboard .expense-item.income-transaction:hover {
+  border-color: rgba(35, 143, 133, 0.3);
+}
+
 :root[data-theme="dark"] .auth-shell,
 :root[data-theme="dark"] .summary-card:not(.primary-summary),
 :root[data-theme="dark"] .limits-card,
@@ -819,6 +1139,131 @@ a {
   background: #116c65;
 }
 
+:root[data-theme="dark"] app-dashboard .income-summary {
+  background: #16332f;
+  border-color: #2d625b;
+}
+
+:root[data-theme="dark"] app-dashboard .income-summary strong,
+:root[data-theme="dark"] app-dashboard .income-amount,
+:root[data-theme="dark"] app-dashboard .positive-money {
+  color: #81ddd3;
+}
+
+:root[data-theme="dark"] app-dashboard .transaction-type-toggle {
+  background: #0e1a1f;
+  border-color: #344b54;
+}
+
+:root[data-theme="dark"] app-dashboard .expense-item {
+  background: linear-gradient(90deg, rgba(239, 115, 115, 0.1), rgba(239, 115, 115, 0.025));
+  border-color: rgba(239, 115, 115, 0.17);
+}
+
+:root[data-theme="dark"] app-dashboard .expense-item:hover {
+  border-color: rgba(239, 115, 115, 0.3);
+}
+
+:root[data-theme="dark"] app-dashboard .expense-item[data-type="expense"] .expense-amount {
+  color: #ffaaa2;
+}
+
+:root[data-theme="dark"] app-dashboard .expense-item.income-transaction {
+  background: linear-gradient(90deg, rgba(43, 184, 170, 0.14), rgba(43, 184, 170, 0.035));
+  border-color: rgba(43, 184, 170, 0.2);
+}
+
+:root[data-theme="dark"] app-dashboard .expense-item.income-transaction:hover {
+  border-color: rgba(43, 184, 170, 0.34);
+}
+
+:root[data-theme="dark"] .limit-income-toggle {
+  background: #111f25;
+  border-color: #344b54;
+}
+
+:root[data-theme="dark"] app-dashboard .expense-copy .type-badge[data-type="income"] {
+  color: #8ce4d9;
+  background: #173a3a;
+  border-color: #295b58;
+}
+
+:root[data-theme="dark"] app-dashboard .expense-copy .type-badge[data-type="expense"] {
+  color: #ffaaa2;
+  background: #3a2527;
+  border-color: #6d3c40;
+}
+
+:root[data-theme="dark"] app-dashboard .expense-copy .payment-badge[data-payment="cash"] {
+  color: #f1d099;
+  background: #332a1b;
+  border-color: #68542c;
+}
+
+:root[data-theme="dark"] app-dashboard .expense-copy .payment-badge[data-payment="card"] {
+  color: #d3b8ef;
+  background: #2e253b;
+  border-color: #55436d;
+}
+
+:root[data-theme="dark"] app-dashboard .expense-copy .payment-badge[data-payment="bankTransfer"] {
+  color: #a9d8f4;
+  background: #1d3140;
+  border-color: #365b73;
+}
+
+:root[data-theme="dark"] app-dashboard .expense-copy .payment-badge[data-payment="unspecified"] {
+  color: #b8c5cb;
+  background: #26383f;
+  border-color: #405861;
+}
+
+:root[data-theme="dark"] app-dashboard .expense-copy .category-badge {
+  color: #f1d099;
+  background: #332a1b;
+  border-color: #68542c;
+}
+
+:root[data-theme="dark"] app-dashboard .expense-copy .category-badge[data-category="Transport"],
+:root[data-theme="dark"] app-dashboard .expense-copy .category-badge[data-category="Subscriptions"] {
+  color: #d3b8ef;
+  background: #2e253b;
+  border-color: #55436d;
+}
+
+:root[data-theme="dark"] app-dashboard .expense-copy .category-badge[data-category="Home"],
+:root[data-theme="dark"] app-dashboard .expense-copy .category-badge[data-category="Health"] {
+  color: #a9d8f4;
+  background: #1d3140;
+  border-color: #365b73;
+}
+
+:root[data-theme="dark"] app-dashboard .expense-copy .category-badge[data-category="Leisure"],
+:root[data-theme="dark"] app-dashboard .expense-copy .category-badge[data-category="Other"],
+:root[data-theme="dark"] app-dashboard .expense-copy .category-badge[data-category="Investments"] {
+  color: #8ce4d9;
+  background: #17332f;
+  border-color: #2d625b;
+}
+
+:root[data-theme="dark"] app-dashboard .expense-copy .category-badge[data-category="Vehicle"] {
+  color: #ffc398;
+  background: #3a291f;
+  border-color: #704c32;
+}
+
+:root[data-theme="dark"] app-dashboard .expense-copy .category-badge[data-category="FinancialExpenses"] {
+  color: #ffaaa2;
+  background: #3a2527;
+  border-color: #6d3c40;
+}
+
+:root[data-theme="dark"] app-dashboard .expense-copy .category-badge[data-category="Gift"] {
+  color: #f4acd0;
+  background: #3b2231;
+  border-color: #70405a;
+}
+
 :root[data-theme="dark"] .settings-section,
 :root[data-theme="dark"] .limit-status,
 :root[data-theme="dark"] .analytics-stats article,
@@ -843,6 +1288,13 @@ a {
   color: var(--ink);
   background-color: #1b2d34;
   border-color: #3b5059;
+}
+
+:root[data-theme="dark"] .field.field-invalid input,
+:root[data-theme="dark"] .field.field-invalid select {
+  background: #321f22;
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(239, 115, 115, 0.12);
 }
 
 :root[data-theme="dark"] .filter-control select {

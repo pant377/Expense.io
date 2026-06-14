@@ -4,6 +4,8 @@ export interface ExpenseCsvLabels {
   description: string;
   amount: string;
   category: string;
+  transactionType: string;
+  paymentMethod: string;
   date: string;
   createdAt: string;
 }
@@ -12,12 +14,16 @@ export function buildExpenseCsv(
   expenses: Expense[],
   labels: ExpenseCsvLabels,
   categoryLabel: (category: Expense['category']) => string,
+  transactionTypeLabel: (type: Expense['transactionType']) => string,
+  paymentMethodLabel: (method: Expense['paymentMethod']) => string,
 ): string {
   const rows = [
     [
       labels.description,
       labels.amount,
       labels.category,
+      labels.transactionType,
+      labels.paymentMethod,
       labels.date,
       labels.createdAt,
     ],
@@ -25,6 +31,8 @@ export function buildExpenseCsv(
       expense.description,
       (expense.amountCents / 100).toFixed(2),
       categoryLabel(expense.category),
+      transactionTypeLabel(expense.transactionType),
+      paymentMethodLabel(expense.paymentMethod),
       localDateKey(expense.occurredAt.toDate()),
       (expense.createdAt?.toDate?.() ?? expense.occurredAt.toDate()).toISOString(),
     ]),

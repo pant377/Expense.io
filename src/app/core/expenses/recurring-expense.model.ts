@@ -1,6 +1,10 @@
 import { Timestamp } from 'firebase/firestore';
 
-import { ExpenseCategory } from './expense.model';
+import {
+  ExpenseCategory,
+  PaymentMethod,
+  TransactionType,
+} from './expense.model';
 
 export const RECURRING_FREQUENCIES = ['weekly', 'monthly'] as const;
 
@@ -11,6 +15,8 @@ export interface RecurringExpenseSchedule {
   description: string;
   amountCents: number;
   category: ExpenseCategory;
+  transactionType: TransactionType;
+  paymentMethod: PaymentMethod | null;
   frequency: RecurringFrequency;
   startDate: Timestamp;
   nextOccurrenceAt: Timestamp;
@@ -23,8 +29,32 @@ export interface RecurringExpenseDraft {
   description: string;
   amountCents: number;
   category: ExpenseCategory;
+  transactionType: TransactionType;
+  paymentMethod: PaymentMethod;
   frequency: RecurringFrequency;
   startDate: Timestamp;
+}
+
+export function normalizeRecurringExpenseSchedule(
+  id: string,
+  data: Record<string, unknown>,
+): RecurringExpenseSchedule {
+  const paymentMethod = data['paymentMethod'];
+
+  return {
+    ...(data as unknown as Omit<
+      RecurringExpenseSchedule,
+      'id' | 'transactionType' | 'paymentMethod'
+    >),
+    id,
+    transactionType: data['transactionType'] === 'income' ? 'income' : 'expense',
+    paymentMethod:
+      paymentMethod === 'cash' ||
+      paymentMethod === 'card' ||
+      paymentMethod === 'bankTransfer'
+        ? paymentMethod
+        : null,
+  };
 }
 
 export function nextRecurringDate(

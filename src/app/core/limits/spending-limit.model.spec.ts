@@ -6,13 +6,20 @@ import {
   buildSpendingLimitSummary,
 } from './spending-limit.model';
 
-function expense(id: string, amountCents: number, date: string): Expense {
+function expense(
+  id: string,
+  amountCents: number,
+  date: string,
+  transactionType: Expense['transactionType'] = 'expense',
+): Expense {
   const timestamp = Timestamp.fromDate(new Date(`${date}T12:00:00`));
 
   return {
     id,
     amountCents,
     category: 'Food',
+    transactionType,
+    paymentMethod: 'card',
     description: id,
     occurredAt: timestamp,
     createdAt: timestamp,
@@ -24,6 +31,7 @@ describe('spending limits', () => {
   const limits: SpendingLimits = {
     dailyLimitCents: 2000,
     monthlyLimitCents: 10000,
+    excludeIncome: true,
   };
 
   it('calculates daily and monthly usage for the current periods', () => {
@@ -48,7 +56,11 @@ describe('spending limits', () => {
   it('returns no status when a limit is disabled', () => {
     const summary = buildSpendingLimitSummary(
       [expense('today', 2500, '2026-06-13')],
-      { dailyLimitCents: null, monthlyLimitCents: null },
+      {
+        dailyLimitCents: null,
+        monthlyLimitCents: null,
+        excludeIncome: true,
+      },
       new Date('2026-06-13T18:00:00'),
     );
 
@@ -76,5 +88,47 @@ describe('spending limits', () => {
     );
 
     expect(summary.daily?.exceededPercent).toBe(0.1);
+  });
+
+  it('does not count income toward spending limits', () => {
+    const summary = buildSpendingLimitSummary(
+      [
+        expense('expense', 1000, '2026-06-13'),
+        expense('income', 100000, '2026-06-13', 'income'),
+      ],
+      limits,
+      new Date('2026-06-13T18:00:00'),
+    );
+
+    expect(summary.daily?.spentCents).toBe(1000);
+    expect(summary.monthly?.spentCents).toBe(1000);
+  });
+
+  it('uses income to offset spending when exclusion is disabled', () => {
+    const summary = buildSpendingLimitSummary(
+      [
+        expense('expense', 3000, '2026-06-13'),
+        expense('income', 1250, '2026-06-13', 'income'),
+      ],
+      { ...limits, excludeIncome: false },
+      new Date('2026-06-13T18:00:00'),
+    );
+
+    expect(summary.daily?.spentCents).toBe(1750);
+    expect(summary.monthly?.spentCents).toBe(1750);
+  });
+
+  it('never reports negative net spending when income exceeds expenses', () => {
+    const summary = buildSpendingLimitSummary(
+      [
+        expense('expense', 1000, '2026-06-13'),
+        expense('income', 5000, '2026-06-13', 'income'),
+      ],
+      { ...limits, excludeIncome: false },
+      new Date('2026-06-13T18:00:00'),
+    );
+
+    expect(summary.daily?.spentCents).toBe(0);
+    expect(summary.monthly?.spentCents).toBe(0);
   });
 });

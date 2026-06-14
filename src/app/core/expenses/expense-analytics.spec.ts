@@ -15,6 +15,8 @@ function expense(
     id,
     amountCents,
     category,
+    transactionType: 'expense',
+    paymentMethod: 'card',
     description: id,
     occurredAt: timestamp,
     createdAt: timestamp,
@@ -28,6 +30,11 @@ describe('expense analytics', () => {
     expense('food-two', 800, 'Food', '2026-06-15'),
     expense('home', 3000, 'Home', '2026-05-10'),
     expense('transport', 1500, 'Transport', '2025-06-10'),
+    {
+      ...expense('salary', 250000, 'FinancialExpenses', '2024-06-10'),
+      transactionType: 'income' as const,
+      paymentMethod: 'bankTransfer' as const,
+    },
   ];
 
   it('builds monthly totals, comparison and category breakdown', () => {
@@ -63,6 +70,19 @@ describe('expense analytics', () => {
 
   it('returns sorted available years including the current year', () => {
     expect(availableExpenseYears(expenses, 2026)).toEqual([2026, 2025]);
+  });
+
+  it('excludes income from spending analytics', () => {
+    const analytics = buildExpenseAnalytics(expenses, {
+      mode: 'year',
+      year: 2024,
+      month: 0,
+      category: 'All',
+    });
+
+    expect(analytics.totalCents).toBe(0);
+    expect(analytics.count).toBe(0);
+    expect(analytics.categories).toEqual([]);
   });
 
   it('localizes analytics labels in Greek', () => {

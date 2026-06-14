@@ -1,4 +1,8 @@
-import { Expense, ExpenseCategory } from './expense.model';
+import {
+  Expense,
+  ExpenseCategory,
+  isExpenseTransaction,
+} from './expense.model';
 import { formatMonthName } from '../i18n/date-labels';
 
 export type AnalyticsMode = 'month' | 'year';
@@ -41,7 +45,9 @@ export interface ExpenseAnalytics {
 export function availableExpenseYears(expenses: Expense[], currentYear = new Date().getFullYear()): number[] {
   const years = new Set<number>([currentYear]);
 
-  expenses.forEach((expense) => years.add(expense.occurredAt.toDate().getFullYear()));
+  expenses
+    .filter(isExpenseTransaction)
+    .forEach((expense) => years.add(expense.occurredAt.toDate().getFullYear()));
 
   return [...years].sort((left, right) => right - left);
 }
@@ -86,6 +92,10 @@ export function buildExpenseAnalytics(
 
 function filterForPeriod(expenses: Expense[], filters: AnalyticsFilters): Expense[] {
   return expenses.filter((expense) => {
+    if (!isExpenseTransaction(expense)) {
+      return false;
+    }
+
     const date = expense.occurredAt.toDate();
     const matchesPeriod =
       date.getFullYear() === filters.year &&

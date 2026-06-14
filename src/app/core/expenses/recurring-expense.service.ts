@@ -17,6 +17,7 @@ import {
   dateKey,
   nextOccurrenceOnOrAfter,
   nextRecurringDate,
+  normalizeRecurringExpenseSchedule,
 } from './recurring-expense.model';
 
 const MAX_OCCURRENCES_PER_SYNC = 400;
@@ -38,10 +39,12 @@ export class RecurringExpenseService {
           this.zone.run(() =>
             subscriber.next(
               snapshot.docs
-                .map((scheduleDocument) => ({
-                  id: scheduleDocument.id,
-                  ...scheduleDocument.data({ serverTimestamps: 'estimate' }),
-                }) as RecurringExpenseSchedule)
+                .map((scheduleDocument) =>
+                  normalizeRecurringExpenseSchedule(
+                    scheduleDocument.id,
+                    scheduleDocument.data({ serverTimestamps: 'estimate' }),
+                  ),
+                )
                 .sort(
                   (left, right) =>
                     (right.createdAt?.toMillis?.() ?? 0) -
@@ -113,6 +116,8 @@ export class RecurringExpenseService {
         today,
       );
       batch.update(scheduleReference, {
+        transactionType: schedule.transactionType,
+        paymentMethod: schedule.paymentMethod,
         nextOccurrenceAt: Timestamp.fromDate(nextOccurrence),
         updatedAt: serverTimestamp(),
       });
@@ -132,6 +137,8 @@ export class RecurringExpenseService {
     const batch = writeBatch(firestore);
     const update: Record<string, unknown> = {
       active,
+      transactionType: schedule.transactionType,
+      paymentMethod: schedule.paymentMethod,
       updatedAt: serverTimestamp(),
     };
 
@@ -179,6 +186,8 @@ export class RecurringExpenseService {
         description: schedule.description,
         amountCents: schedule.amountCents,
         category: schedule.category,
+        transactionType: schedule.transactionType,
+        paymentMethod: schedule.paymentMethod,
         occurredAt: Timestamp.fromDate(occurrence),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),

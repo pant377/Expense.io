@@ -19,6 +19,8 @@ function expense(
     description,
     category,
     amountCents: 1000,
+    transactionType: id === 'new-backdated' ? 'income' : 'expense',
+    paymentMethod: id === 'middle-entry' ? 'cash' : 'card',
     occurredAt: Timestamp.fromDate(new Date(`${occurredAt}T12:00:00`)),
     createdAt: Timestamp.fromDate(new Date(createdAt)),
     updatedAt: Timestamp.fromDate(new Date(createdAt)),
@@ -66,5 +68,15 @@ describe('expense list', () => {
         category: 'Home',
       }),
     ).toBeTrue();
+  });
+
+  it('filters by transaction type and payment method', () => {
+    expect(
+      buildExpenseList(expenses, {
+        ...EMPTY_EXPENSE_LIST_FILTERS,
+        transactionType: 'expense',
+        paymentMethod: 'cash',
+      }).map(({ id }) => id),
+    ).toEqual(['middle-entry']);
   });
 });

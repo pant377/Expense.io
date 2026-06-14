@@ -1,7 +1,10 @@
+import { Timestamp } from 'firebase/firestore';
+
 import {
   dateKey,
   nextOccurrenceOnOrAfter,
   nextRecurringDate,
+  normalizeRecurringExpenseSchedule,
 } from './recurring-expense.model';
 
 describe('recurring expense dates', () => {
@@ -28,5 +31,23 @@ describe('recurring expense dates', () => {
     );
 
     expect(dateKey(next)).toBe('2026-03-31');
+  });
+
+  it('normalizes legacy schedules without inventing transaction data', () => {
+    const timestamp = Timestamp.fromDate(new Date(2026, 5, 13, 12));
+    const schedule = normalizeRecurringExpenseSchedule('legacy', {
+      description: 'Legacy schedule',
+      amountCents: 1000,
+      category: 'Food',
+      frequency: 'monthly',
+      startDate: timestamp,
+      nextOccurrenceAt: timestamp,
+      active: true,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+
+    expect(schedule.transactionType).toBe('expense');
+    expect(schedule.paymentMethod).toBeNull();
   });
 });

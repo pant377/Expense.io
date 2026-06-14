@@ -54,22 +54,35 @@
             <span>{{ t('dashboard.thisMonth') }}</span>
             <strong>
               {{
-                vm.monthCents / 100
+                vm.monthExpenseCents / 100
+                  | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+              }}
+            </strong>
+            <small>{{ t('dashboard.liveTotal') }}</small>
+          </article>
+          <article class="summary-card income-summary">
+            <span>{{ t('dashboard.incomeThisMonth') }}</span>
+            <strong>
+              {{
+                vm.monthIncomeCents / 100
                   | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
               }}
             </strong>
             <small>{{ t('dashboard.liveTotal') }}</small>
           </article>
           <article class="summary-card">
-            <span>{{ t('dashboard.allExpenses') }}</span>
-            <strong>
+            <span>{{ t('dashboard.netBalance') }}</span>
+            <strong
+              [class.positive-money]="vm.balanceCents > 0"
+              [class.negative-money]="vm.balanceCents < 0"
+            >
               {{
-                vm.totalCents / 100
+                vm.balanceCents / 100
                   | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
               }}
             </strong>
             <small>
-              {{ t('dashboard.recordedTransactions', { count: vm.expenses.length }) }}
+              {{ t('dashboard.allTime') }}
             </small>
           </article>
         </div>
@@ -79,11 +92,46 @@
         <aside class="expense-form-card">
           <div>
             <p class="eyebrow">{{ t('expense.newEyebrow') }}</p>
-            <h2>{{ t('expense.addTitle') }}</h2>
+            <h2>
+              {{
+                expenseForm.controls.transactionType.value === 'income'
+                  ? t('expense.addIncome')
+                  : t('expense.addExpense')
+              }}
+            </h2>
           </div>
 
           <form [formGroup]="expenseForm" (ngSubmit)="addExpense()">
-            <div class="field">
+            <div class="field transaction-type-field">
+              <label id="transaction-type-label">
+                {{ t('expense.transactionType') }}
+              </label>
+              <div
+                class="transaction-type-toggle"
+                role="radiogroup"
+                aria-labelledby="transaction-type-label"
+              >
+                @for (type of transactionTypes; track type) {
+                  <button
+                    type="button"
+                    role="radio"
+                    [class.active]="expenseForm.controls.transactionType.value === type"
+                    [attr.aria-checked]="expenseForm.controls.transactionType.value === type"
+                    (click)="expenseForm.controls.transactionType.setValue(type)"
+                  >
+                    {{ transactionTypeLabel(type) }}
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div
+              class="field"
+              [class.field-invalid]="
+                expenseForm.controls.description.invalid &&
+                expenseForm.controls.description.touched
+              "
+            >
               <label for="description">{{ t('expense.description') }}</label>
               <input
                 id="description"
@@ -91,11 +139,35 @@
                 formControlName="description"
                 [placeholder]="t('expense.descriptionPlaceholder')"
                 autocomplete="off"
+                [attr.aria-invalid]="
+                  expenseForm.controls.description.invalid &&
+                  expenseForm.controls.description.touched
+                "
+                [attr.aria-describedby]="
+                  expenseForm.controls.description.invalid &&
+                  expenseForm.controls.description.touched
+                    ? 'description-error'
+                    : null
+                "
               >
+              @if (
+                expenseForm.controls.description.invalid &&
+                expenseForm.controls.description.touched
+              ) {
+                <small id="description-error" class="field-error">
+                  {{ t('expense.descriptionRequired') }}
+                </small>
+              }
             </div>
 
             <div class="form-row">
-              <div class="field">
+              <div
+                class="field"
+                [class.field-invalid]="
+                  expenseForm.controls.amount.invalid &&
+                  expenseForm.controls.amount.touched
+                "
+              >
                 <label for="amount">{{ t('expense.amount') }}</label>
                 <div class="amount-input">
                   <span aria-hidden="true">&euro;</span>
@@ -106,14 +178,69 @@
                     step="0.01"
                     formControlName="amount"
                     placeholder="0.00"
+                    [attr.aria-invalid]="
+                      expenseForm.controls.amount.invalid &&
+                      expenseForm.controls.amount.touched
+                    "
+                    [attr.aria-describedby]="
+                      expenseForm.controls.amount.invalid &&
+                      expenseForm.controls.amount.touched
+                        ? 'amount-error'
+                        : null
+                    "
                   >
                 </div>
+                @if (
+                  expenseForm.controls.amount.invalid &&
+                  expenseForm.controls.amount.touched
+                ) {
+                  <small id="amount-error" class="field-error">
+                    {{ t('expense.amountRequired') }}
+                  </small>
+                }
               </div>
 
               <div class="field">
                 <label for="date">{{ t('expense.date') }}</label>
                 <input id="date" type="date" formControlName="occurredAt">
               </div>
+            </div>
+
+            <div
+              class="field"
+              [class.field-invalid]="
+                expenseForm.controls.paymentMethod.invalid &&
+                expenseForm.controls.paymentMethod.touched
+              "
+            >
+              <label for="payment-method">{{ t('expense.paymentMethod') }}</label>
+              <select
+                id="payment-method"
+                formControlName="paymentMethod"
+                [attr.aria-invalid]="
+                  expenseForm.controls.paymentMethod.invalid &&
+                  expenseForm.controls.paymentMethod.touched
+                "
+                [attr.aria-describedby]="
+                  expenseForm.controls.paymentMethod.invalid &&
+                  expenseForm.controls.paymentMethod.touched
+                    ? 'payment-method-error'
+                    : null
+                "
+              >
+                <option value="" disabled>{{ t('payment.select') }}</option>
+                @for (method of paymentMethods; track method) {
+                  <option [value]="method">{{ paymentMethodLabel(method) }}</option>
+                }
+              </select>
+              @if (
+                expenseForm.controls.paymentMethod.invalid &&
+                expenseForm.controls.paymentMethod.touched
+              ) {
+                <small id="payment-method-error" class="field-error">
+                  {{ t('expense.paymentMethodRequired') }}
+                </small>
+              }
             </div>
 
             <div class="field category-field" (click)="$event.stopPropagation()">
@@ -130,7 +257,9 @@
                   class="category-choice-icon"
                   [attr.data-category]="expenseForm.controls.category.value"
                 >
-                  {{ categoryInitial(expenseForm.controls.category.value) }}
+                  <app-category-icon
+                    [category]="expenseForm.controls.category.value"
+                  />
                 </span>
                 <span id="selected-category">
                   {{ categoryLabel(expenseForm.controls.category.value) }}
@@ -149,7 +278,7 @@
                       (click)="selectCategory(category, $event)"
                     >
                       <span class="category-choice-icon" [attr.data-category]="category">
-                        {{ categoryInitial(category) }}
+                        <app-category-icon [category]="category" />
                       </span>
                       <span>{{ categoryLabel(category) }}</span>
                       @if (expenseForm.controls.category.value === category) {
@@ -187,7 +316,13 @@
             }
 
             <button class="button button-primary add-button" type="submit" [disabled]="isSaving()">
-              {{ isSaving() ? t('expense.saving') : t('expense.add') }}
+              {{
+                isSaving()
+                  ? t('expense.saving')
+                  : expenseForm.controls.transactionType.value === 'income'
+                    ? t('expense.addIncome')
+                    : t('expense.addExpense')
+              }}
             </button>
           </form>
         </aside>
@@ -765,6 +900,32 @@
               </label>
 
               <label class="expense-filter-control">
+                <span>{{ t('expense.filterType') }}</span>
+                <select
+                  [value]="vm.expenseListFilters.transactionType"
+                  (change)="updateExpenseListTransactionType($any($event.target).value)"
+                >
+                  <option value="All">{{ transactionTypeLabel('All') }}</option>
+                  @for (type of transactionTypes; track type) {
+                    <option [value]="type">{{ transactionTypeLabel(type) }}</option>
+                  }
+                </select>
+              </label>
+
+              <label class="expense-filter-control">
+                <span>{{ t('expense.filterPaymentMethod') }}</span>
+                <select
+                  [value]="vm.expenseListFilters.paymentMethod"
+                  (change)="updateExpenseListPaymentMethod($any($event.target).value)"
+                >
+                  <option value="All">{{ paymentMethodLabel('All') }}</option>
+                  @for (method of paymentMethods; track method) {
+                    <option [value]="method">{{ paymentMethodLabel(method) }}</option>
+                  }
+                </select>
+              </label>
+
+              <label class="expense-filter-control">
                 <span>{{ t('expense.dateFrom') }}</span>
                 <input
                   type="date"
@@ -799,21 +960,48 @@
           @if (vm.expensePagination.totalItems) {
             <div class="expense-list">
               @for (expense of vm.expensePagination.items; track expense.id) {
-                <article class="expense-item">
+                <article
+                  class="expense-item"
+                  [attr.data-type]="expense.transactionType"
+                  [class.income-transaction]="expense.transactionType === 'income'"
+                >
                   <div class="category-icon" [attr.data-category]="expense.category">
-                    {{ categoryInitial(expense.category) }}
+                    <app-category-icon [category]="expense.category" />
                   </div>
                   <div class="expense-copy">
                     <strong>{{ expense.description }}</strong>
-                    <span>
-                      {{ categoryLabel(expense.category) }} &middot;
-                      {{
-                        timestampToDate(expense.occurredAt)
-                          | date: 'd MMM y' : undefined : language.locale()
-                      }}
-                    </span>
+                    <div class="transaction-metadata">
+                      <span
+                        class="transaction-badge type-badge"
+                        [attr.data-type]="expense.transactionType"
+                      >
+                        {{ transactionTypeLabel(expense.transactionType) }}
+                      </span>
+                      <span
+                        class="transaction-badge category-badge"
+                        [attr.data-category]="expense.category"
+                      >
+                        {{ categoryLabel(expense.category) }}
+                      </span>
+                      <span
+                        class="transaction-badge payment-badge"
+                        [attr.data-payment]="expense.paymentMethod ?? 'unspecified'"
+                      >
+                        {{ paymentMethodLabel(expense.paymentMethod) }}
+                      </span>
+                      <span class="transaction-date">
+                        {{
+                          timestampToDate(expense.occurredAt)
+                            | date: 'd MMM y' : undefined : language.locale()
+                        }}
+                      </span>
+                    </div>
                   </div>
-                  <strong class="expense-amount">
+                  <strong
+                    class="expense-amount"
+                    [class.income-amount]="expense.transactionType === 'income'"
+                  >
+                    {{ expense.transactionType === 'income' ? '+' : '-' }}
                     {{
                       expense.amountCents / 100
                         | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
@@ -1031,6 +1219,17 @@
             </div>
           </div>
 
+          <label class="limit-income-toggle">
+            <input type="checkbox" formControlName="excludeIncome">
+            <span class="limit-income-toggle-control" aria-hidden="true">
+              <span></span>
+            </span>
+            <span>
+              <strong>{{ t('limits.excludeIncome') }}</strong>
+              <small>{{ t('limits.excludeIncomeDescription') }}</small>
+            </span>
+          </label>
+
           @if (spendingLimitForm.invalid && spendingLimitForm.touched) {
             <p class="limit-validation" role="alert">{{ t('limits.invalid') }}</p>
           }
@@ -1179,7 +1378,48 @@
         [formGroup]="editExpenseForm"
         (ngSubmit)="saveEditedExpense()"
       >
-        <div class="field edit-description-field">
+        <div class="field">
+          <label for="edit-transaction-type">
+            {{ t('expense.transactionType') }}
+          </label>
+          <select id="edit-transaction-type" formControlName="transactionType">
+            @for (type of transactionTypes; track type) {
+              <option [value]="type">{{ transactionTypeLabel(type) }}</option>
+            }
+          </select>
+        </div>
+        <div
+          class="field"
+          [class.field-invalid]="
+            editExpenseForm.controls.paymentMethod.invalid &&
+            editExpenseForm.controls.paymentMethod.touched
+          "
+        >
+          <label for="edit-payment-method">
+            {{ t('expense.paymentMethod') }}
+          </label>
+          <select id="edit-payment-method" formControlName="paymentMethod">
+            <option value="" disabled>{{ t('payment.select') }}</option>
+            @for (method of paymentMethods; track method) {
+              <option [value]="method">{{ paymentMethodLabel(method) }}</option>
+            }
+          </select>
+          @if (
+            editExpenseForm.controls.paymentMethod.invalid &&
+            editExpenseForm.controls.paymentMethod.touched
+          ) {
+            <small class="field-error">
+              {{ t('expense.paymentMethodRequired') }}
+            </small>
+          }
+        </div>
+        <div
+          class="field edit-description-field"
+          [class.field-invalid]="
+            editExpenseForm.controls.description.invalid &&
+            editExpenseForm.controls.description.touched
+          "
+        >
           <label for="edit-description">{{ t('expense.description') }}</label>
           <input
             id="edit-description"
@@ -1187,8 +1427,22 @@
             formControlName="description"
             autocomplete="off"
           >
+          @if (
+            editExpenseForm.controls.description.invalid &&
+            editExpenseForm.controls.description.touched
+          ) {
+            <small class="field-error">
+              {{ t('expense.descriptionRequired') }}
+            </small>
+          }
         </div>
-        <div class="field">
+        <div
+          class="field"
+          [class.field-invalid]="
+            editExpenseForm.controls.amount.invalid &&
+            editExpenseForm.controls.amount.touched
+          "
+        >
           <label for="edit-amount">{{ t('expense.amount') }}</label>
           <div class="amount-input">
             <span aria-hidden="true">&euro;</span>
@@ -1200,6 +1454,14 @@
               formControlName="amount"
             >
           </div>
+          @if (
+            editExpenseForm.controls.amount.invalid &&
+            editExpenseForm.controls.amount.touched
+          ) {
+            <small class="field-error">
+              {{ t('expense.amountRequired') }}
+            </small>
+          }
         </div>
         <div class="field">
           <label for="edit-date">{{ t('expense.date') }}</label>
@@ -1277,7 +1539,7 @@
                 class="category-choice-icon"
                 [attr.data-category]="schedule.category"
               >
-                {{ categoryInitial(schedule.category) }}
+                <app-category-icon [category]="schedule.category" />
               </span>
               <div class="recurring-item-copy">
                 <div>
@@ -1294,7 +1556,9 @@
                   </span>
                 </div>
                 <span>
+                  {{ transactionTypeLabel(schedule.transactionType) }} &middot;
                   {{ categoryLabel(schedule.category) }} &middot;
+                  {{ paymentMethodLabel(schedule.paymentMethod) }} &middot;
                   {{ recurringFrequencyLabel(schedule.frequency) }} &middot;
                   {{ t('recurring.next') }}
                   {{
@@ -1303,7 +1567,11 @@
                   }}
                 </span>
               </div>
-              <strong class="recurring-amount">
+              <strong
+                class="recurring-amount"
+                [class.income-amount]="schedule.transactionType === 'income'"
+              >
+                {{ schedule.transactionType === 'income' ? '+' : '-' }}
                 {{
                   schedule.amountCents / 100
                     | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
@@ -1370,11 +1638,15 @@
       <div class="delete-preview">
         <div>
           <span class="category-choice-icon" [attr.data-category]="expense.category">
-            {{ categoryInitial(expense.category) }}
+            <app-category-icon [category]="expense.category" />
           </span>
           <div>
-            <strong>{{ categoryLabel(expense.category) }}</strong>
+            <strong>
+              {{ transactionTypeLabel(expense.transactionType) }} &middot;
+              {{ categoryLabel(expense.category) }}
+            </strong>
             <span>
+              {{ paymentMethodLabel(expense.paymentMethod) }} &middot;
               {{
                 timestampToDate(expense.occurredAt)
                   | date: 'd MMMM y' : undefined : language.locale()
@@ -1382,7 +1654,8 @@
             </span>
           </div>
         </div>
-        <strong>
+        <strong [class.income-amount]="expense.transactionType === 'income'">
+          {{ expense.transactionType === 'income' ? '+' : '-' }}
           {{
             expense.amountCents / 100
               | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()

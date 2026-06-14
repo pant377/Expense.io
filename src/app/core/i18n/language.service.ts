@@ -1,7 +1,11 @@
 import { DOCUMENT } from '@angular/common';
 import { Injectable, computed, inject, signal } from '@angular/core';
 
-import { ExpenseCategory } from '../expenses/expense.model';
+import {
+  ExpenseCategory,
+  PaymentMethod,
+  TransactionType,
+} from '../expenses/expense.model';
 import { formatMonthName } from './date-labels';
 import { AppLanguage, TranslationKey, translate } from './translations';
 
@@ -42,6 +46,16 @@ export class LanguageService {
 
   category(category: ExpenseCategory | 'All'): string {
     return this.t(`category.${category}` as TranslationKey);
+  }
+
+  transactionType(type: TransactionType | 'All'): string {
+    return this.t(`transaction.${type}` as TranslationKey);
+  }
+
+  paymentMethod(method: PaymentMethod | null | 'All'): string {
+    return this.t(
+      `payment.${method ?? 'unspecified'}` as TranslationKey,
+    );
   }
 
   month(month: number): string {

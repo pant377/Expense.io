@@ -3,6 +3,7 @@ import { Expense } from '../expenses/expense.model';
 export interface SpendingLimits {
   dailyLimitCents: number | null;
   monthlyLimitCents: number | null;
+  excludeIncome: boolean;
 }
 
 export interface SpendingLimitStatus {
@@ -23,6 +24,7 @@ export interface SpendingLimitSummary {
 export const EMPTY_SPENDING_LIMITS: SpendingLimits = {
   dailyLimitCents: null,
   monthlyLimitCents: null,
+  excludeIncome: true,
 };
 
 export function buildSpendingLimitSummary(
@@ -33,8 +35,8 @@ export function buildSpendingLimitSummary(
   let dailySpentCents = 0;
   let monthlySpentCents = 0;
 
-  expenses.forEach((expense) => {
-    const occurredAt = expense.occurredAt.toDate();
+  expenses.forEach((transaction) => {
+    const occurredAt = transaction.occurredAt.toDate();
     const isCurrentMonth =
       occurredAt.getFullYear() === now.getFullYear() &&
       occurredAt.getMonth() === now.getMonth();
@@ -43,16 +45,26 @@ export function buildSpendingLimitSummary(
       return;
     }
 
-    monthlySpentCents += expense.amountCents;
+    const signedAmount =
+      transaction.transactionType === 'expense'
+        ? transaction.amountCents
+        : limits.excludeIncome
+          ? 0
+          : -transaction.amountCents;
+
+    monthlySpentCents += signedAmount;
 
     if (occurredAt.getDate() === now.getDate()) {
-      dailySpentCents += expense.amountCents;
+      dailySpentCents += signedAmount;
     }
   });
 
   return {
-    daily: buildLimitStatus(dailySpentCents, limits.dailyLimitCents),
-    monthly: buildLimitStatus(monthlySpentCents, limits.monthlyLimitCents),
+    daily: buildLimitStatus(Math.max(dailySpentCents, 0), limits.dailyLimitCents),
+    monthly: buildLimitStatus(
+      Math.max(monthlySpentCents, 0),
+      limits.monthlyLimitCents,
+    ),
   };
 }
 

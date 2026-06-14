@@ -33,6 +33,8 @@ service cloud.firestore {
           'description',
           'amountCents',
           'category',
+          'transactionType',
+          'paymentMethod',
           'occurredAt',
           'createdAt',
           'updatedAt'
@@ -41,6 +43,8 @@ service cloud.firestore {
           'description',
           'amountCents',
           'category',
+          'transactionType',
+          'paymentMethod',
           'occurredAt',
           'createdAt',
           'updatedAt'
@@ -54,12 +58,21 @@ service cloud.firestore {
         && request.resource.data.category in [
           'Food',
           'Transport',
+          'Vehicle',
           'Home',
           'Health',
           'Leisure',
           'Subscriptions',
+          'FinancialExpenses',
+          'Investments',
+          'Gift',
           'Other'
         ]
+        && request.resource.data.transactionType in ['expense', 'income']
+        && (
+          request.resource.data.paymentMethod == null
+          || request.resource.data.paymentMethod in ['cash', 'card', 'bankTransfer']
+        )
         && request.resource.data.occurredAt is timestamp
         && request.resource.data.createdAt is timestamp
         && request.resource.data.updatedAt is timestamp;
@@ -69,11 +82,13 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly([
           'dailyLimitCents',
           'monthlyLimitCents',
+          'excludeIncome',
           'updatedAt'
         ])
         && request.resource.data.keys().hasAll([
           'dailyLimitCents',
           'monthlyLimitCents',
+          'excludeIncome',
           'updatedAt'
         ])
         && (
@@ -92,6 +107,7 @@ service cloud.firestore {
             && request.resource.data.monthlyLimitCents <= 100000000000
           )
         )
+        && request.resource.data.excludeIncome is bool
         && request.resource.data.updatedAt is timestamp;
     }
 
@@ -100,6 +116,8 @@ service cloud.firestore {
           'description',
           'amountCents',
           'category',
+          'transactionType',
+          'paymentMethod',
           'frequency',
           'startDate',
           'nextOccurrenceAt',
@@ -111,6 +129,8 @@ service cloud.firestore {
           'description',
           'amountCents',
           'category',
+          'transactionType',
+          'paymentMethod',
           'frequency',
           'startDate',
           'nextOccurrenceAt',
@@ -127,12 +147,21 @@ service cloud.firestore {
         && request.resource.data.category in [
           'Food',
           'Transport',
+          'Vehicle',
           'Home',
           'Health',
           'Leisure',
           'Subscriptions',
+          'FinancialExpenses',
+          'Investments',
+          'Gift',
           'Other'
         ]
+        && request.resource.data.transactionType in ['expense', 'income']
+        && (
+          request.resource.data.paymentMethod == null
+          || request.resource.data.paymentMethod in ['cash', 'card', 'bankTransfer']
+        )
         && request.resource.data.frequency in ['weekly', 'monthly']
         && request.resource.data.startDate is timestamp
         && request.resource.data.nextOccurrenceAt is timestamp

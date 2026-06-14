@@ -33,15 +33,22 @@ import {
 } from '../../core/expenses/expense-analytics';
 import {
   EXPENSE_CATEGORIES,
+  PAYMENT_METHODS,
+  TRANSACTION_TYPES,
   Expense,
   ExpenseCategory,
+  PaymentMethod,
+  TransactionType,
   eurosToCents,
 } from '../../core/expenses/expense.model';
+import { CategoryIconComponent } from '../../core/expenses/category-icon.component';
 import { buildExpenseCsv } from '../../core/expenses/expense-export';
 import {
   EMPTY_EXPENSE_LIST_FILTERS,
   ExpenseListCategory,
   ExpenseListFilters,
+  ExpenseListPaymentMethod,
+  ExpenseListTransactionType,
   buildExpenseList,
   hasExpenseListFilters,
 } from '../../core/expenses/expense-list';
@@ -74,6 +81,7 @@ interface PieSegment extends CategoryBreakdown {
     CurrencyPipe,
     DatePipe,
     DecimalPipe,
+    CategoryIconComponent,
     LanguageToggleComponent,
     ReactiveFormsModule,
   ],
@@ -85,10 +93,14 @@ export class DashboardComponent {
   private readonly categoryColors: Record<ExpenseCategory, string> = {
     Food: '#e0a33c',
     Transport: '#8a67b1',
+    Vehicle: '#d97b42',
     Home: '#4d9ac8',
     Health: '#d76a77',
     Leisure: '#5fa98f',
     Subscriptions: '#b06aa5',
+    FinancialExpenses: '#b65f55',
+    Investments: '#238f85',
+    Gift: '#d45d96',
     Other: '#718096',
   };
   private readonly formBuilder = inject(NonNullableFormBuilder);
@@ -102,6 +114,8 @@ export class DashboardComponent {
   readonly theme = inject(ThemeService);
 
   readonly categories = EXPENSE_CATEGORIES;
+  readonly transactionTypes = TRANSACTION_TYPES;
+  readonly paymentMethods = PAYMENT_METHODS;
   readonly months = Array.from({ length: 12 }, (_, value) => value);
   readonly isSaving = signal(false);
   readonly isSavingLimits = signal(false);
@@ -139,18 +153,36 @@ export class DashboardComponent {
   readonly breakdownView = signal<'bars' | 'pie'>('bars');
 
   readonly expenseForm = this.formBuilder.group({
-    description: ['', [Validators.required, Validators.maxLength(120)]],
+    description: [
+      '',
+      [
+        Validators.required,
+        Validators.pattern(/\S/),
+        Validators.maxLength(120),
+      ],
+    ],
     amount: [null as number | null, [Validators.required, Validators.min(0.01)]],
     category: ['Food' as ExpenseCategory, Validators.required],
+    transactionType: ['expense' as TransactionType, Validators.required],
+    paymentMethod: ['' as PaymentMethod | '', Validators.required],
     occurredAt: [this.today(), Validators.required],
     recurring: [false],
     frequency: ['monthly' as RecurringFrequency, Validators.required],
   });
 
   readonly editExpenseForm = this.formBuilder.group({
-    description: ['', [Validators.required, Validators.maxLength(120)]],
+    description: [
+      '',
+      [
+        Validators.required,
+        Validators.pattern(/\S/),
+        Validators.maxLength(120),
+      ],
+    ],
     amount: [null as number | null, [Validators.required, Validators.min(0.01)]],
     category: ['Food' as ExpenseCategory, Validators.required],
+    transactionType: ['expense' as TransactionType, Validators.required],
+    paymentMethod: ['' as PaymentMethod | '', Validators.required],
     occurredAt: ['', Validators.required],
   });
 
@@ -163,6 +195,7 @@ export class DashboardComponent {
       null as number | null,
       [Validators.min(0.01), Validators.max(1_000_000_000)],
     ],
+    excludeIncome: [true],
   });
 
   readonly deleteAccountForm = this.formBuilder.group({
@@ -203,14 +236,22 @@ export class DashboardComponent {
         limits$,
         recurringSchedules$,
       ]).pipe(
-        map(([expenses, limits, recurringSchedules]) => ({
-          user,
-          expenses,
-          limits,
-          recurringSchedules,
-          totalCents: expenses.reduce((total, expense) => total + expense.amountCents, 0),
-          monthCents: this.currentMonthTotal(expenses),
-        })),
+        map(([expenses, limits, recurringSchedules]) => {
+          const totalExpenseCents = this.totalForType(expenses, 'expense');
+          const totalIncomeCents = this.totalForType(expenses, 'income');
+
+          return {
+            user,
+            expenses,
+            limits,
+            recurringSchedules,
+            totalExpenseCents,
+            totalIncomeCents,
+            monthExpenseCents: this.currentMonthTotal(expenses, 'expense'),
+            monthIncomeCents: this.currentMonthTotal(expenses, 'income'),
+            balanceCents: totalIncomeCents - totalExpenseCents,
+          };
+        }),
         catchError((error: unknown) => {
           this.loadError.set(firebaseErrorMessage(error, this.language.current()));
           return of({
@@ -218,8 +259,11 @@ export class DashboardComponent {
             expenses: [] as Expense[],
             limits: { ...EMPTY_SPENDING_LIMITS },
             recurringSchedules: [] as RecurringExpenseSchedule[],
-            totalCents: 0,
-            monthCents: 0,
+            totalExpenseCents: 0,
+            totalIncomeCents: 0,
+            monthExpenseCents: 0,
+            monthIncomeCents: 0,
+            balanceCents: 0,
           });
         }),
       );
@@ -281,12 +325,14 @@ export class DashboardComponent {
       description,
       amount,
       category,
+      transactionType,
+      paymentMethod,
       occurredAt,
       recurring,
       frequency,
     } = this.expenseForm.getRawValue();
 
-    if (!user || amount === null) {
+    if (!user || amount === null || !paymentMethod) {
       return;
     }
 
@@ -298,6 +344,8 @@ export class DashboardComponent {
         description: description.trim(),
         amountCents: eurosToCents(amount),
         category,
+        transactionType,
+        paymentMethod,
         occurredAt: this.expenseService.dateToTimestamp(occurredAt),
       };
 
@@ -306,6 +354,8 @@ export class DashboardComponent {
           description: draft.description,
           amountCents: draft.amountCents,
           category: draft.category,
+          transactionType: draft.transactionType,
+          paymentMethod: draft.paymentMethod,
           frequency,
           startDate: draft.occurredAt,
         });
@@ -317,6 +367,8 @@ export class DashboardComponent {
         description: '',
         amount: null,
         category: 'Food',
+        transactionType: 'expense',
+        paymentMethod: '',
         occurredAt: this.today(),
         recurring: false,
         frequency: 'monthly',
@@ -340,7 +392,7 @@ export class DashboardComponent {
       return;
     }
 
-    const { dailyLimit, monthlyLimit } =
+    const { dailyLimit, monthlyLimit, excludeIncome } =
       this.spendingLimitForm.getRawValue();
 
     this.isSavingLimits.set(true);
@@ -353,6 +405,7 @@ export class DashboardComponent {
           dailyLimit === null ? null : eurosToCents(dailyLimit),
         monthlyLimitCents:
           monthlyLimit === null ? null : eurosToCents(monthlyLimit),
+        excludeIncome,
       });
       this.spendingLimitForm.markAsPristine();
       this.limitSuccess.set(this.t('limits.saved'));
@@ -507,6 +560,18 @@ export class DashboardComponent {
     });
   }
 
+  updateExpenseListTransactionType(value: string): void {
+    this.updateExpenseListFilters({
+      transactionType: value as ExpenseListTransactionType,
+    });
+  }
+
+  updateExpenseListPaymentMethod(value: string): void {
+    this.updateExpenseListFilters({
+      paymentMethod: value as ExpenseListPaymentMethod,
+    });
+  }
+
   updateExpenseDateFrom(value: string): void {
     this.updateExpenseListFilters({ dateFrom: value });
   }
@@ -527,6 +592,8 @@ export class DashboardComponent {
       description: expense.description,
       amount: expense.amountCents / 100,
       category: expense.category,
+      transactionType: expense.transactionType,
+      paymentMethod: expense.paymentMethod ?? '',
       occurredAt: this.dateInputValue(expense.occurredAt.toDate()),
     });
   }
@@ -546,10 +613,17 @@ export class DashboardComponent {
 
     const user = this.authService.currentUser;
     const expense = this.expensePendingEdit();
-    const { description, amount, category, occurredAt } =
+    const {
+      description,
+      amount,
+      category,
+      transactionType,
+      paymentMethod,
+      occurredAt,
+    } =
       this.editExpenseForm.getRawValue();
 
-    if (!user || !expense || amount === null) {
+    if (!user || !expense || amount === null || !paymentMethod) {
       return;
     }
 
@@ -561,6 +635,8 @@ export class DashboardComponent {
         description: description.trim(),
         amountCents: eurosToCents(amount),
         category,
+        transactionType,
+        paymentMethod,
         occurredAt: this.expenseService.dateToTimestamp(occurredAt),
       });
       this.expensePendingEdit.set(null);
@@ -647,10 +723,14 @@ export class DashboardComponent {
         description: this.t('export.description'),
         amount: this.t('export.amount'),
         category: this.t('export.category'),
+        transactionType: this.t('export.transactionType'),
+        paymentMethod: this.t('export.paymentMethod'),
         date: this.t('export.date'),
         createdAt: this.t('export.createdAt'),
       },
       (category) => this.categoryLabel(category),
+      (type) => this.transactionTypeLabel(type),
+      (method) => this.paymentMethodLabel(method),
     );
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -715,8 +795,12 @@ export class DashboardComponent {
     return this.language.category(category);
   }
 
-  categoryInitial(category: ExpenseCategory): string {
-    return this.categoryLabel(category).charAt(0);
+  transactionTypeLabel(type: TransactionType | 'All'): string {
+    return this.language.transactionType(type);
+  }
+
+  paymentMethodLabel(method: PaymentMethod | null | 'All'): string {
+    return this.language.paymentMethod(method);
   }
 
   monthLabel(month: number): string {
@@ -738,10 +822,17 @@ export class DashboardComponent {
     this.closeRecurringExpenses();
   }
 
-  private currentMonthTotal(expenses: Expense[]): number {
+  private currentMonthTotal(
+    expenses: Expense[],
+    type: TransactionType,
+  ): number {
     const now = new Date();
 
     return expenses.reduce((total, expense) => {
+      if (expense.transactionType !== type) {
+        return total;
+      }
+
       const occurredAt = expense.occurredAt.toDate();
       const isCurrentMonth =
         occurredAt.getFullYear() === now.getFullYear() &&
@@ -749,6 +840,16 @@ export class DashboardComponent {
 
       return isCurrentMonth ? total + expense.amountCents : total;
     }, 0);
+  }
+
+  private totalForType(expenses: Expense[], type: TransactionType): number {
+    return expenses.reduce(
+      (total, expense) =>
+        expense.transactionType === type
+          ? total + expense.amountCents
+          : total,
+      0,
+    );
   }
 
   private syncSpendingLimitForm(limits: SpendingLimits): void {
@@ -766,6 +867,7 @@ export class DashboardComponent {
           limits.monthlyLimitCents === null
             ? null
             : limits.monthlyLimitCents / 100,
+        excludeIncome: limits.excludeIncome,
       },
       { emitEvent: false },
     );

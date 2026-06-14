@@ -12,7 +12,7 @@ import {
 import { Observable } from 'rxjs';
 
 import { firestore } from '../firebase/firebase.client';
-import { Expense, ExpenseDraft } from './expense.model';
+import { Expense, ExpenseDraft, normalizeExpense } from './expense.model';
 
 @Injectable({ providedIn: 'root' })
 export class ExpenseService {
@@ -27,10 +27,12 @@ export class ExpenseService {
         (snapshot) =>
           this.zone.run(() =>
             subscriber.next(
-              snapshot.docs.map((expenseDocument) => ({
-                id: expenseDocument.id,
-                ...expenseDocument.data({ serverTimestamps: 'estimate' }),
-              })) as Expense[],
+              snapshot.docs.map((expenseDocument) =>
+                normalizeExpense(
+                  expenseDocument.id,
+                  expenseDocument.data({ serverTimestamps: 'estimate' }),
+                ),
+              ),
             ),
           ),
         (error) => this.zone.run(() => subscriber.error(error)),

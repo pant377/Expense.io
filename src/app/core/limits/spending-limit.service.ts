@@ -43,6 +43,10 @@ export class SpendingLimitService {
                 typeof data['monthlyLimitCents'] === 'number'
                   ? data['monthlyLimitCents']
                   : null,
+              excludeIncome:
+                typeof data['excludeIncome'] === 'boolean'
+                  ? data['excludeIncome']
+                  : true,
             });
           }),
         (error) => this.zone.run(() => subscriber.error(error)),
