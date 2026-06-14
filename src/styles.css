@@ -623,6 +623,15 @@ app-dashboard :is(.expense-photo-field, .edit-photo-field) {
   border-radius: 12px;
 }
 
+app-dashboard .expense-form-card :is(.description-field, .form-row) {
+  min-width: 0;
+  grid-column: 1 / -1;
+}
+
+app-dashboard .expense-form-card .form-row > .field {
+  min-width: 0;
+}
+
 app-dashboard .edit-photo-field {
   grid-column: 1 / -1;
 }
