@@ -1,7 +1,10 @@
 import { Timestamp } from 'firebase/firestore';
 
 import { Expense } from './expense.model';
-import { availableExpenseYears, buildExpenseAnalytics } from './expense-analytics';
+import {
+  availableTransactionYears,
+  buildExpenseAnalytics,
+} from './expense-analytics';
 
 function expense(
   id: string,
@@ -43,6 +46,7 @@ describe('expense analytics', () => {
       year: 2026,
       month: 5,
       category: 'All',
+      transactionType: 'expense',
     });
 
     expect(analytics.totalCents).toBe(2000);
@@ -60,6 +64,7 @@ describe('expense analytics', () => {
       year: 2026,
       month: 0,
       category: 'Home',
+      transactionType: 'expense',
     });
 
     expect(analytics.totalCents).toBe(3000);
@@ -69,15 +74,39 @@ describe('expense analytics', () => {
   });
 
   it('returns sorted available years including the current year', () => {
-    expect(availableExpenseYears(expenses, 2026)).toEqual([2026, 2025]);
+    expect(availableTransactionYears(expenses, 'expense', 2026)).toEqual([
+      2026,
+      2025,
+    ]);
+    expect(availableTransactionYears(expenses, 'income', 2026)).toEqual([
+      2026,
+      2024,
+    ]);
   });
 
-  it('excludes income from spending analytics', () => {
+  it('builds income analytics without mixing in expenses', () => {
     const analytics = buildExpenseAnalytics(expenses, {
       mode: 'year',
       year: 2024,
       month: 0,
       category: 'All',
+      transactionType: 'income',
+    });
+
+    expect(analytics.totalCents).toBe(250000);
+    expect(analytics.count).toBe(1);
+    expect(analytics.averageCents).toBe(250000);
+    expect(analytics.topCategory).toBe('FinancialExpenses');
+    expect(analytics.points[5].amountCents).toBe(250000);
+  });
+
+  it('keeps income out of expense analytics', () => {
+    const analytics = buildExpenseAnalytics(expenses, {
+      mode: 'year',
+      year: 2024,
+      month: 0,
+      category: 'All',
+      transactionType: 'expense',
     });
 
     expect(analytics.totalCents).toBe(0);
@@ -93,11 +122,28 @@ describe('expense analytics', () => {
         year: 2026,
         month: 5,
         category: 'All',
+        transactionType: 'expense',
       },
       'el-GR',
     );
 
     expect(analytics.periodLabel).toContain('Ιούνιος');
     expect(analytics.chartLabel).toBe('Ημερήσια έξοδα');
+  });
+
+  it('uses income-specific chart labels', () => {
+    const analytics = buildExpenseAnalytics(
+      expenses,
+      {
+        mode: 'year',
+        year: 2024,
+        month: 0,
+        category: 'All',
+        transactionType: 'income',
+      },
+      'el-GR',
+    );
+
+    expect(analytics.chartLabel).toBe('Μηνιαία έσοδα');
   });
 });

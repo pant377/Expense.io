@@ -29,7 +29,7 @@ import {
   CategoryBreakdown,
   AnalyticsFilters,
   AnalyticsMode,
-  availableExpenseYears,
+  availableTransactionYears,
   buildExpenseAnalytics,
 } from '../../core/expenses/expense-analytics';
 import {
@@ -160,6 +160,7 @@ export class DashboardComponent {
     year: new Date().getFullYear(),
     month: new Date().getMonth(),
     category: 'All',
+    transactionType: 'expense',
   });
   readonly breakdownView = signal<'bars' | 'pie'>('bars');
   readonly newExpensePhoto = signal<File | null>(null);
@@ -336,7 +337,12 @@ export class DashboardComponent {
           this.language.localeFor(language),
         ),
         analyticsFilters: filters,
-        availableYears: availableExpenseYears(viewModel.expenses),
+        availableYears: availableTransactionYears(
+          viewModel.expenses,
+          filters.transactionType,
+          new Date().getFullYear(),
+          filters.year,
+        ),
         expenseListFilters,
         filteredExpenses,
         hasExpenseListFilters: hasExpenseListFilters(expenseListFilters),
@@ -546,6 +552,14 @@ export class DashboardComponent {
 
   updateAnalyticsMode(mode: AnalyticsMode): void {
     this.analyticsFilters.update((filters) => ({ ...filters, mode }));
+  }
+
+  updateAnalyticsTransactionType(transactionType: TransactionType): void {
+    this.analyticsFilters.update((filters) => ({
+      ...filters,
+      transactionType,
+    }));
+    this.hoveredPieCategory.set(null);
   }
 
   updateAnalyticsYear(value: string): void {

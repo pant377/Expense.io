@@ -632,6 +632,38 @@ app-dashboard .expense-form-card .form-row > .field {
   min-width: 0;
 }
 
+app-dashboard .analytics-header-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+app-dashboard .analytics-header-controls .transaction-tabs {
+  grid-template-columns: repeat(2, minmax(92px, 1fr));
+}
+
+app-dashboard
+  .analytics-card[data-transaction-type="income"]
+  .transaction-tabs
+  button.active {
+  color: #087168;
+}
+
+app-dashboard
+  .analytics-card[data-transaction-type="income"]
+  .analytics-stats
+  .change-up {
+  color: var(--primary);
+}
+
+app-dashboard
+  .analytics-card[data-transaction-type="income"]
+  .analytics-stats
+  .change-down {
+  color: var(--danger);
+}
+
 app-dashboard .edit-photo-field {
   grid-column: 1 / -1;
 }
@@ -1769,6 +1801,16 @@ app-dashboard .expense-item.income-transaction:hover {
 }
 
 @media (max-width: 600px) {
+  app-dashboard .analytics-header-controls {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: grid;
+  }
+
+  app-dashboard .analytics-header-controls .period-tabs {
+    min-width: 0;
+  }
+
   app-dashboard .dashboard-shell .topbar {
     gap: 0.5rem;
     padding-bottom: 1rem;

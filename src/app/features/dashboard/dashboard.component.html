@@ -525,34 +525,69 @@
       </section>
       </section>
 
-      <section class="analytics-card" aria-labelledby="analytics-title">
+      <section
+        class="analytics-card"
+        aria-labelledby="analytics-title"
+        [attr.data-transaction-type]="vm.analyticsFilters.transactionType"
+      >
         <div class="analytics-header">
           <div>
-            <p class="eyebrow">{{ t('analytics.eyebrow') }}</p>
+            <p class="eyebrow">
+              {{
+                vm.analyticsFilters.transactionType === 'income'
+                  ? t('analytics.incomeEyebrow')
+                  : t('analytics.eyebrow')
+              }}
+            </p>
             <h2 id="analytics-title">
               {{ t('analytics.overview', { period: vm.analytics.periodLabel }) }}
             </h2>
           </div>
 
-          <div
-            class="period-tabs"
-            role="group"
-            [attr.aria-label]="t('analytics.periodAria')"
-          >
-            <button
-              type="button"
-              [class.active]="vm.analyticsFilters.mode === 'month'"
-              (click)="updateAnalyticsMode('month')"
+          <div class="analytics-header-controls">
+            <div
+              class="period-tabs transaction-tabs"
+              role="group"
+              [attr.aria-label]="t('analytics.transactionTypeAria')"
             >
-              {{ t('analytics.month') }}
-            </button>
-            <button
-              type="button"
-              [class.active]="vm.analyticsFilters.mode === 'year'"
-              (click)="updateAnalyticsMode('year')"
+              @for (type of transactionTypes; track type) {
+                <button
+                  type="button"
+                  [class.active]="vm.analyticsFilters.transactionType === type"
+                  [attr.aria-pressed]="
+                    vm.analyticsFilters.transactionType === type
+                  "
+                  (click)="updateAnalyticsTransactionType(type)"
+                >
+                  {{
+                    type === 'income'
+                      ? t('analytics.incomeTab')
+                      : t('analytics.expensesTab')
+                  }}
+                </button>
+              }
+            </div>
+
+            <div
+              class="period-tabs"
+              role="group"
+              [attr.aria-label]="t('analytics.periodAria')"
             >
-              {{ t('analytics.year') }}
-            </button>
+              <button
+                type="button"
+                [class.active]="vm.analyticsFilters.mode === 'month'"
+                (click)="updateAnalyticsMode('month')"
+              >
+                {{ t('analytics.month') }}
+              </button>
+              <button
+                type="button"
+                [class.active]="vm.analyticsFilters.mode === 'year'"
+                (click)="updateAnalyticsMode('year')"
+              >
+                {{ t('analytics.year') }}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -619,7 +654,13 @@
 
         <div class="analytics-stats">
           <article>
-            <span>{{ t('analytics.totalSpent') }}</span>
+            <span>
+              {{
+                vm.analyticsFilters.transactionType === 'income'
+                  ? t('analytics.totalIncome')
+                  : t('analytics.totalSpent')
+              }}
+            </span>
             <strong>
               {{
                 vm.analytics.totalCents / 100
@@ -627,7 +668,13 @@
               }}
             </strong>
             @if (vm.analytics.changePercent === null) {
-              <small>{{ t('analytics.noPrevious') }}</small>
+              <small>
+                {{
+                  vm.analyticsFilters.transactionType === 'income'
+                    ? t('analytics.noPreviousIncome')
+                    : t('analytics.noPrevious')
+                }}
+              </small>
             } @else {
               <small
                 [class.change-up]="vm.analytics.changePercent > 0"
@@ -651,7 +698,13 @@
             <small>{{ t('analytics.selectedPeriod') }}</small>
           </article>
           <article>
-            <span>{{ t('analytics.average') }}</span>
+            <span>
+              {{
+                vm.analyticsFilters.transactionType === 'income'
+                  ? t('analytics.averageIncome')
+                  : t('analytics.average')
+              }}
+            </span>
             <strong>
               {{
                 vm.analytics.averageCents / 100
@@ -738,7 +791,13 @@
             <div class="panel-heading">
               <div>
                 <h3>{{ t('analytics.breakdown') }}</h3>
-                <p>{{ t('analytics.breakdownDescription') }}</p>
+                <p>
+                  {{
+                    vm.analyticsFilters.transactionType === 'income'
+                      ? t('analytics.incomeBreakdownDescription')
+                      : t('analytics.breakdownDescription')
+                  }}
+                </p>
               </div>
               <div
                 class="breakdown-view-toggle"
@@ -772,7 +831,11 @@
                     [class.has-active-slice]="hoveredPieCategory() !== null"
                     role="img"
                     viewBox="0 0 200 200"
-                    [attr.aria-label]="t('analytics.pieAria')"
+                    [attr.aria-label]="
+                      vm.analyticsFilters.transactionType === 'income'
+                        ? t('analytics.incomePieAria')
+                        : t('analytics.pieAria')
+                    "
                   >
                     @for (
                       segment of pieSegments(vm.analytics.categories);
@@ -844,8 +907,12 @@
                         {{ item.count }}
                         {{
                           item.count === 1
-                            ? t('analytics.expense')
-                            : t('analytics.expenses')
+                            ? vm.analyticsFilters.transactionType === 'income'
+                              ? t('analytics.income')
+                              : t('analytics.expense')
+                            : vm.analyticsFilters.transactionType === 'income'
+                              ? t('analytics.incomes')
+                              : t('analytics.expenses')
                         }}
                       </small>
                       <span>

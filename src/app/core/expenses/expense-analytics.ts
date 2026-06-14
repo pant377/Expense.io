@@ -1,7 +1,7 @@
 import {
   Expense,
   ExpenseCategory,
-  isExpenseTransaction,
+  TransactionType,
 } from './expense.model';
 import { formatMonthName } from '../i18n/date-labels';
 
@@ -13,6 +13,7 @@ export interface AnalyticsFilters {
   year: number;
   month: number;
   category: AnalyticsCategory;
+  transactionType: TransactionType;
 }
 
 export interface AnalyticsPoint {
@@ -42,11 +43,16 @@ export interface ExpenseAnalytics {
   categories: CategoryBreakdown[];
 }
 
-export function availableExpenseYears(expenses: Expense[], currentYear = new Date().getFullYear()): number[] {
-  const years = new Set<number>([currentYear]);
+export function availableTransactionYears(
+  expenses: Expense[],
+  transactionType: TransactionType,
+  currentYear = new Date().getFullYear(),
+  selectedYear = currentYear,
+): number[] {
+  const years = new Set<number>([currentYear, selectedYear]);
 
   expenses
-    .filter(isExpenseTransaction)
+    .filter((expense) => expense.transactionType === transactionType)
     .forEach((expense) => years.add(expense.occurredAt.toDate().getFullYear()));
 
   return [...years].sort((left, right) => right - left);
@@ -71,11 +77,19 @@ export function buildExpenseAnalytics(
     chartLabel:
       locale === 'el-GR'
         ? filters.mode === 'month'
-          ? 'Ημερήσια έξοδα'
-          : 'Μηνιαία έξοδα'
+          ? filters.transactionType === 'income'
+            ? 'Ημερήσια έσοδα'
+            : 'Ημερήσια έξοδα'
+          : filters.transactionType === 'income'
+            ? 'Μηνιαία έσοδα'
+            : 'Μηνιαία έξοδα'
         : filters.mode === 'month'
-          ? 'Daily spending'
-          : 'Monthly spending',
+          ? filters.transactionType === 'income'
+            ? 'Daily income'
+            : 'Daily spending'
+          : filters.transactionType === 'income'
+            ? 'Monthly income'
+            : 'Monthly spending',
     totalCents,
     previousTotalCents,
     changePercent: calculateChange(totalCents, previousTotalCents),
@@ -92,7 +106,7 @@ export function buildExpenseAnalytics(
 
 function filterForPeriod(expenses: Expense[], filters: AnalyticsFilters): Expense[] {
   return expenses.filter((expense) => {
-    if (!isExpenseTransaction(expense)) {
+    if (expense.transactionType !== filters.transactionType) {
       return false;
     }
 
