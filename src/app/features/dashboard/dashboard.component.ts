@@ -239,6 +239,8 @@ export class DashboardComponent {
         map(([expenses, limits, recurringSchedules]) => {
           const totalExpenseCents = this.totalForType(expenses, 'expense');
           const totalIncomeCents = this.totalForType(expenses, 'income');
+          const monthExpenseCents = this.currentMonthTotal(expenses, 'expense');
+          const monthIncomeCents = this.currentMonthTotal(expenses, 'income');
 
           return {
             user,
@@ -247,8 +249,9 @@ export class DashboardComponent {
             recurringSchedules,
             totalExpenseCents,
             totalIncomeCents,
-            monthExpenseCents: this.currentMonthTotal(expenses, 'expense'),
-            monthIncomeCents: this.currentMonthTotal(expenses, 'income'),
+            monthExpenseCents,
+            monthIncomeCents,
+            monthBalanceCents: monthIncomeCents - monthExpenseCents,
             balanceCents: totalIncomeCents - totalExpenseCents,
           };
         }),
@@ -263,6 +266,7 @@ export class DashboardComponent {
             totalIncomeCents: 0,
             monthExpenseCents: 0,
             monthIncomeCents: 0,
+            monthBalanceCents: 0,
             balanceCents: 0,
           });
         }),

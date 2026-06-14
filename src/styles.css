@@ -852,6 +852,33 @@ app-dashboard .expense-copy .transaction-date {
   white-space: nowrap;
 }
 
+app-dashboard .breakdown-panel.pie-mode {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.6fr) minmax(0, 1.4fr);
+  align-items: center;
+  column-gap: 1.5rem;
+}
+
+app-dashboard .breakdown-panel.pie-mode .panel-heading {
+  grid-column: 1 / -1;
+}
+
+app-dashboard .breakdown-panel.pie-mode .pie-chart-wrap {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+app-dashboard .breakdown-panel.pie-mode .category-breakdown {
+  grid-column: 2;
+  grid-row: 2;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+app-dashboard .breakdown-panel:not(.pie-mode) .category-breakdown {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 1.25rem;
+}
+
 .edit-expense-button:hover {
   color: var(--primary);
   background: #eaf5f3;
@@ -1079,7 +1106,8 @@ app-dashboard .category-icon[data-category="Gift"] {
 }
 
 app-dashboard .expense-list {
-  gap: 0.65rem;
+  display: grid;
+  gap: 0.5rem;
 }
 
 app-dashboard .expense-item {
@@ -1548,6 +1576,17 @@ app-dashboard .expense-item.income-transaction:hover {
   background: #3a2225;
 }
 
+@media (max-width: 900px) {
+  app-dashboard .breakdown-panel.pie-mode {
+    grid-template-columns: 1fr;
+  }
+
+  app-dashboard .breakdown-panel.pie-mode :is(.pie-chart-wrap, .category-breakdown) {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
 @media (max-width: 760px) {
   app-dashboard .analytics-card .chart-panel .panel-heading {
     flex-wrap: wrap;
@@ -1602,6 +1641,11 @@ app-dashboard .expense-item.income-transaction:hover {
   app-dashboard .analytics-card .breakdown-panel {
     padding: 0.95rem;
     border-radius: 15px;
+  }
+
+  app-dashboard .breakdown-panel.pie-mode .category-breakdown,
+  app-dashboard .breakdown-panel:not(.pie-mode) .category-breakdown {
+    grid-template-columns: 1fr;
   }
 
   app-dashboard .analytics-card .panel-heading {

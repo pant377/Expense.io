@@ -71,6 +71,19 @@
             <small>{{ t('dashboard.liveTotal') }}</small>
           </article>
           <article class="summary-card">
+            <span>{{ t('dashboard.netBalanceThisMonth') }}</span>
+            <strong
+              [class.positive-money]="vm.monthBalanceCents > 0"
+              [class.negative-money]="vm.monthBalanceCents < 0"
+            >
+              {{
+                vm.monthBalanceCents / 100
+                  | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+              }}
+            </strong>
+            <small>{{ t('dashboard.liveTotal') }}</small>
+          </article>
+          <article class="summary-card">
             <span>{{ t('dashboard.netBalance') }}</span>
             <strong
               [class.positive-money]="vm.balanceCents > 0"
@@ -126,7 +139,7 @@
             </div>
 
             <div
-              class="field"
+              class="field description-field"
               [class.field-invalid]="
                 expenseForm.controls.description.invalid &&
                 expenseForm.controls.description.touched
@@ -207,7 +220,7 @@
             </div>
 
             <div
-              class="field"
+              class="field payment-method-field"
               [class.field-invalid]="
                 expenseForm.controls.paymentMethod.invalid &&
                 expenseForm.controls.paymentMethod.touched
@@ -673,7 +686,10 @@
             </div>
           </article>
 
-          <article class="breakdown-panel">
+          <article
+            class="breakdown-panel"
+            [class.pie-mode]="breakdownView() === 'pie'"
+          >
             <div class="panel-heading">
               <div>
                 <h3>{{ t('analytics.breakdown') }}</h3>
