@@ -28,13 +28,16 @@ service cloud.firestore {
         ;
     }
 
-    function validExpense() {
+    function validExpense(userId, expenseId) {
       return request.resource.data.keys().hasOnly([
           'description',
           'amountCents',
           'category',
           'transactionType',
           'paymentMethod',
+          'photoStoragePath',
+          'photoFileName',
+          'photoContentType',
           'occurredAt',
           'createdAt',
           'updatedAt'
@@ -72,6 +75,30 @@ service cloud.firestore {
         && (
           request.resource.data.paymentMethod == null
           || request.resource.data.paymentMethod in ['cash', 'card', 'bankTransfer']
+        )
+        && (
+          !request.resource.data.keys().hasAny([
+            'photoStoragePath',
+            'photoFileName',
+            'photoContentType'
+          ])
+          || (
+            request.resource.data.keys().hasAll([
+              'photoStoragePath',
+              'photoFileName',
+              'photoContentType'
+            ])
+            && request.resource.data.photoStoragePath
+              == 'users/' + userId + '/expenses/' + expenseId + '/receipt'
+            && request.resource.data.photoFileName is string
+            && request.resource.data.photoFileName.size() > 0
+            && request.resource.data.photoFileName.size() <= 120
+            && request.resource.data.photoContentType in [
+              'image/jpeg',
+              'image/png',
+              'image/webp'
+            ]
+          )
         )
         && request.resource.data.occurredAt is timestamp
         && request.resource.data.createdAt is timestamp
@@ -179,9 +206,9 @@ service cloud.firestore {
 
       match /expenses/{expenseId} {
         allow read, delete: if signedInAs(userId);
-        allow create: if signedInAs(userId) && validExpense();
+        allow create: if signedInAs(userId) && validExpense(userId, expenseId);
         allow update: if signedInAs(userId)
-          && validExpense()
+          && validExpense(userId, expenseId)
           && request.resource.data.createdAt == resource.data.createdAt;
       }
 

@@ -15,6 +15,11 @@ const FIREBASE_ERROR_MESSAGES: Record<AppLanguage, Record<string, string>> = {
     'auth/too-many-requests': 'Too many attempts. Please wait and try again.',
     'auth/unauthorized-domain': 'Google sign-in is not authorized for this domain.',
     'auth/weak-password': 'Use a password with at least 6 characters.',
+    'expense-photo/size': 'Choose a non-empty image up to 8 MB.',
+    'expense-photo/type': 'Choose a JPEG, PNG or WebP image.',
+    'storage/unauthorized': 'You do not have permission to access this photo.',
+    'storage/retry-limit-exceeded':
+      'The photo upload timed out. Check your connection and try again.',
     'permission-denied': 'You do not have permission to access this data.',
     unavailable: 'The service is temporarily unavailable. Check your connection.',
   },
@@ -35,6 +40,12 @@ const FIREBASE_ERROR_MESSAGES: Record<AppLanguage, Record<string, string>> = {
     'auth/unauthorized-domain':
       'Η σύνδεση Google δεν είναι εξουσιοδοτημένη για αυτό το domain.',
     'auth/weak-password': 'Χρησιμοποίησε κωδικό με τουλάχιστον 6 χαρακτήρες.',
+    'expense-photo/size': 'Επίλεξε μη κενή εικόνα έως 8 MB.',
+    'expense-photo/type': 'Επίλεξε εικόνα JPEG, PNG ή WebP.',
+    'storage/unauthorized':
+      'Δεν έχεις δικαίωμα πρόσβασης σε αυτή τη φωτογραφία.',
+    'storage/retry-limit-exceeded':
+      'Η μεταφόρτωση της φωτογραφίας καθυστέρησε πολύ. Έλεγξε τη σύνδεσή σου και δοκίμασε ξανά.',
     'permission-denied': 'Δεν έχεις δικαίωμα πρόσβασης σε αυτά τα δεδομένα.',
     unavailable: 'Η υπηρεσία δεν είναι προσωρινά διαθέσιμη. Έλεγξε τη σύνδεσή σου.',
   },

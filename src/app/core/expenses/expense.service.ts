@@ -1,22 +1,33 @@
 import { Injectable, NgZone, inject } from '@angular/core';
 import {
   Timestamp,
-  addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   onSnapshot,
   serverTimestamp,
+  setDoc,
   updateDoc,
 } from 'firebase/firestore';
 import { Observable } from 'rxjs';
 
 import { firestore } from '../firebase/firebase.client';
 import { Expense, ExpenseDraft, normalizeExpense } from './expense.model';
+import {
+  ExpensePhotoMetadata,
+  ExpensePhotoService,
+} from './expense-photo';
+
+export type ExpensePhotoUpdate =
+  | { action: 'keep' }
+  | { action: 'remove' }
+  | { action: 'replace'; file: File };
 
 @Injectable({ providedIn: 'root' })
 export class ExpenseService {
   private readonly zone = inject(NgZone);
+  private readonly expensePhotoService = inject(ExpensePhotoService);
 
   watchExpenses(userId: string): Observable<Expense[]> {
     const expenses = collection(firestore, `users/${userId}/expenses`);
@@ -41,29 +52,92 @@ export class ExpenseService {
     );
   }
 
-  async addExpense(userId: string, expense: ExpenseDraft): Promise<void> {
+  async addExpense(
+    userId: string,
+    expense: ExpenseDraft,
+    photo: File | null = null,
+  ): Promise<void> {
     const expenses = collection(firestore, `users/${userId}/expenses`);
+    const expenseReference = doc(expenses);
+    let photoMetadata: ExpensePhotoMetadata | null = null;
 
-    await addDoc(expenses, {
-      ...expense,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+    try {
+      if (photo) {
+        photoMetadata = await this.expensePhotoService.upload(
+          userId,
+          expenseReference.id,
+          photo,
+        );
+      }
+
+      await setDoc(expenseReference, {
+        ...expense,
+        ...(photoMetadata ?? {}),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error: unknown) {
+      if (photoMetadata) {
+        await this.expensePhotoService
+          .delete(photoMetadata.photoStoragePath)
+          .catch(() => undefined);
+      }
+
+      throw error;
+    }
   }
 
-  async deleteExpense(userId: string, expenseId: string): Promise<void> {
+  async deleteExpense(
+    userId: string,
+    expenseId: string,
+    photoStoragePath: string | null = null,
+  ): Promise<void> {
     await deleteDoc(doc(firestore, `users/${userId}/expenses/${expenseId}`));
+
+    if (photoStoragePath) {
+      await this.expensePhotoService.delete(photoStoragePath).catch(() => undefined);
+    }
   }
 
   async updateExpense(
     userId: string,
     expenseId: string,
     expense: ExpenseDraft,
+    photoUpdate: ExpensePhotoUpdate = { action: 'keep' },
   ): Promise<void> {
+    let photoFields: {
+      photoStoragePath?: unknown;
+      photoFileName?: unknown;
+      photoContentType?: unknown;
+    } = {};
+
+    if (photoUpdate.action === 'replace') {
+      photoFields = await this.expensePhotoService.upload(
+        userId,
+        expenseId,
+        photoUpdate.file,
+      );
+    } else if (photoUpdate.action === 'remove') {
+      photoFields = {
+        photoStoragePath: deleteField(),
+        photoFileName: deleteField(),
+        photoContentType: deleteField(),
+      };
+    }
+
     await updateDoc(doc(firestore, `users/${userId}/expenses/${expenseId}`), {
       ...expense,
+      ...photoFields,
       updatedAt: serverTimestamp(),
     });
+
+    if (photoUpdate.action === 'remove') {
+      await this.expensePhotoService
+        .delete(
+          `users/${userId}/expenses/${expenseId}/receipt`,
+        )
+        .catch(() => undefined);
+    }
   }
 
   dateToTimestamp(date: string): Timestamp {

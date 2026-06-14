@@ -1,14 +1,15 @@
 # Expense.io
 
-A private expense tracker built with Angular 20, Firebase Authentication and Cloud Firestore.
-Each account can only access expenses stored under its own Firebase user ID.
+A private expense tracker built with Angular 20, Firebase Authentication, Cloud Firestore and
+Cloud Storage. Each account can only access data stored under its own Firebase user ID.
 
 ## Features
 
 - Email/password and Google authentication
 - Guarded user dashboard
 - Real-time Firestore expense stream
-- Per-user data isolation with Firestore Security Rules
+- Optional receipt photos stored in per-user Cloud Storage paths
+- Per-user data isolation with Firestore and Storage Security Rules
 - Currency-safe amounts stored as integer cents
 - Firebase Local Emulator Suite configuration
 - Firebase Hosting configuration
@@ -41,7 +42,7 @@ To develop against the real Firebase project:
 npm start
 ```
 
-To use Firebase Auth and Firestore emulators instead:
+To use Firebase Auth, Firestore and Storage emulators instead:
 
 ```bash
 npm run firebase:emulators
@@ -65,7 +66,8 @@ accidentally connect to production Firebase resources.
 ## Connect a real Firebase project
 
 Copy `firebase.project.example.json` to `.firebaserc` and replace the placeholder project ID.
-Enable Email/Password and Google Authentication in Firebase Console.
+Enable Email/Password and Google Authentication in Firebase Console. Create the project's default
+Cloud Storage bucket before using receipt photos.
 
 Google sign-in also requires an active Web OAuth client whose authorized redirect URI includes:
 
@@ -81,19 +83,21 @@ npm run firebase:deploy
 
 Firebase Web App configuration is public in the compiled browser application by design, but it is
 kept out of source control here. User data is protected by Authentication and the rules in
-`firestore.rules`; never replace those rules with unrestricted access.
+`firestore.rules` and `storage.rules`; never replace those rules with unrestricted access.
 
 ## Data model
 
 ```text
 users/{uid}
 users/{uid}/expenses/{expenseId}
+users/{uid}/expenses/{expenseId}/receipt (Cloud Storage)
 ```
 
 Expense documents contain:
 
 ```text
-description, amountCents, category, occurredAt, createdAt, updatedAt
+description, amountCents, category, transactionType, paymentMethod,
+photoStoragePath?, photoFileName?, photoContentType?, occurredAt, createdAt, updatedAt
 ```
 
 ## Verification

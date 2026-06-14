@@ -602,6 +602,139 @@ a {
   line-height: 1.5;
 }
 
+app-dashboard .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+app-dashboard :is(.expense-photo-field, .edit-photo-field) {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  background: #f5f9f8;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+app-dashboard .edit-photo-field {
+  grid-column: 1 / -1;
+}
+
+app-dashboard .expense-photo-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+app-dashboard .expense-photo-heading > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+app-dashboard :is(.expense-photo-heading, .photo-selection) small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+app-dashboard .photo-upload-button {
+  flex: 0 0 auto;
+  padding: 0.55rem 0.75rem;
+  color: var(--primary-dark);
+  background: white;
+  border: 1px solid #bfd4d1;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+app-dashboard .photo-upload-button:hover {
+  background: #e8f3f1;
+}
+
+app-dashboard .photo-selection {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem;
+  background: white;
+  border: 1px solid #dce7e5;
+  border-radius: 10px;
+}
+
+app-dashboard .photo-selection img {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+app-dashboard .photo-selection > div {
+  display: grid;
+  min-width: 0;
+  gap: 0.15rem;
+}
+
+app-dashboard .photo-selection strong {
+  overflow: hidden;
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+app-dashboard .photo-selection button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: #9a6e6e;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  font-size: 1.25rem;
+}
+
+app-dashboard .photo-selection button:hover {
+  color: var(--danger);
+  background: #fff0ef;
+}
+
+app-dashboard .expense-photo-link {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.48rem 0.2rem 0.25rem;
+  color: var(--primary-dark);
+  background: #e7f3f1;
+  border: 1px solid #c4dfda;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+app-dashboard .expense-photo-link img {
+  width: 22px;
+  height: 22px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+app-dashboard .expense-photo-link:hover {
+  background: #dcedea;
+}
+
 .recurring-choice {
   position: relative;
   display: grid;
@@ -1442,6 +1575,29 @@ app-dashboard .expense-item.income-transaction:hover {
 :root[data-theme="dark"] .recurring-item {
   background: #111f25;
   border-color: #344b54;
+}
+
+:root[data-theme="dark"] app-dashboard :is(
+  .expense-photo-field,
+  .edit-photo-field
+) {
+  background: #111f25;
+  border-color: #344b54;
+}
+
+:root[data-theme="dark"] app-dashboard :is(
+  .photo-upload-button,
+  .photo-selection
+) {
+  color: #66d4c9;
+  background: #1b2d34;
+  border-color: #405861;
+}
+
+:root[data-theme="dark"] app-dashboard .expense-photo-link {
+  color: #81ddd3;
+  background: #173a3a;
+  border-color: #295b58;
 }
 
 :root[data-theme="dark"] .activity-tool-button {

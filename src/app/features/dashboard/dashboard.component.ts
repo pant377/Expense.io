@@ -2,6 +2,7 @@ import { AsyncPipe, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common'
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   HostListener,
   inject,
   signal,
@@ -52,7 +53,15 @@ import {
   buildExpenseList,
   hasExpenseListFilters,
 } from '../../core/expenses/expense-list';
-import { ExpenseService } from '../../core/expenses/expense.service';
+import {
+  ExpensePhotoUpdate,
+  ExpenseService,
+} from '../../core/expenses/expense.service';
+import {
+  ExpensePhotoService,
+  ExpensePhotoValidationError,
+  validateExpensePhoto,
+} from '../../core/expenses/expense-photo';
 import {
   RecurringExpenseSchedule,
   RecurringFrequency,
@@ -107,9 +116,11 @@ export class DashboardComponent {
   private readonly accountService = inject(AccountService);
   private readonly authService = inject(AuthService);
   private readonly expenseService = inject(ExpenseService);
+  private readonly expensePhotoService = inject(ExpensePhotoService);
   private readonly recurringExpenseService = inject(RecurringExpenseService);
   private readonly spendingLimitService = inject(SpendingLimitService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
   readonly language = inject(LanguageService);
   readonly theme = inject(ThemeService);
 
@@ -151,6 +162,18 @@ export class DashboardComponent {
     category: 'All',
   });
   readonly breakdownView = signal<'bars' | 'pie'>('bars');
+  readonly newExpensePhoto = signal<File | null>(null);
+  readonly newExpensePhotoPreviewUrl = signal('');
+  readonly newExpensePhotoError =
+    signal<ExpensePhotoValidationError | null>(null);
+  readonly editExpensePhoto = signal<File | null>(null);
+  readonly editExpensePhotoPreviewUrl = signal('');
+  readonly editExpensePhotoError =
+    signal<ExpensePhotoValidationError | null>(null);
+  readonly editExpensePhotoRemoved = signal(false);
+  private readonly expensePhotoUrls = signal<Record<string, string>>({});
+  private readonly photoUrlRequests = new Set<string>();
+  private activePhotoPaths = new Set<string>();
 
   readonly expenseForm = this.formBuilder.group({
     description: [
@@ -203,6 +226,13 @@ export class DashboardComponent {
     password: [''],
   });
 
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      this.revokePreviewUrl(this.newExpensePhotoPreviewUrl());
+      this.revokePreviewUrl(this.editExpensePhotoPreviewUrl());
+    });
+  }
+
   private readonly expenseViewModel$ = this.authService.user$.pipe(
     switchMap((user) => {
       if (!user) {
@@ -232,7 +262,9 @@ export class DashboardComponent {
         );
 
       return combineLatest([
-        this.expenseService.watchExpenses(user.uid),
+        this.expenseService.watchExpenses(user.uid).pipe(
+          tap((expenses) => this.syncExpensePhotoUrls(expenses)),
+        ),
         limits$,
         recurringSchedules$,
       ]).pipe(
@@ -364,9 +396,14 @@ export class DashboardComponent {
           startDate: draft.occurredAt,
         });
       } else {
-        await this.expenseService.addExpense(user.uid, draft);
+        await this.expenseService.addExpense(
+          user.uid,
+          draft,
+          this.newExpensePhoto(),
+        );
       }
       this.expensePage.set(1);
+      this.clearNewExpensePhoto();
       this.expenseForm.reset({
         description: '',
         amount: null,
@@ -430,6 +467,81 @@ export class DashboardComponent {
     this.expenseForm.controls.category.setValue(category);
     this.expenseForm.controls.category.markAsDirty();
     this.categoryMenuOpen.set(false);
+  }
+
+  selectExpensePhoto(event: Event, target: 'create' | 'edit'): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    input.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    const validationError = validateExpensePhoto(file);
+
+    if (target === 'create') {
+      if (validationError) {
+        this.clearNewExpensePhoto();
+        this.newExpensePhotoError.set(validationError);
+        return;
+      }
+
+      this.newExpensePhotoError.set(null);
+      this.setNewExpensePhoto(file);
+      return;
+    }
+
+    if (validationError) {
+      this.clearEditExpensePhoto();
+      this.editExpensePhotoRemoved.set(false);
+      this.editExpensePhotoError.set(validationError);
+      return;
+    }
+
+    this.editExpensePhotoError.set(null);
+    this.setEditExpensePhoto(file);
+    this.editExpensePhotoRemoved.set(false);
+  }
+
+  clearNewExpensePhoto(): void {
+    this.revokePreviewUrl(this.newExpensePhotoPreviewUrl());
+    this.newExpensePhoto.set(null);
+    this.newExpensePhotoPreviewUrl.set('');
+    this.newExpensePhotoError.set(null);
+  }
+
+  clearEditExpensePhoto(): void {
+    this.revokePreviewUrl(this.editExpensePhotoPreviewUrl());
+    this.editExpensePhoto.set(null);
+    this.editExpensePhotoPreviewUrl.set('');
+    this.editExpensePhotoError.set(null);
+  }
+
+  removeEditExpensePhoto(): void {
+    this.clearEditExpensePhoto();
+    this.editExpensePhotoRemoved.set(true);
+  }
+
+  expensePhotoErrorMessage(error: ExpensePhotoValidationError): string {
+    return error === 'size'
+      ? this.t('expense.photoSizeError')
+      : this.t('expense.photoTypeError');
+  }
+
+  expensePhotoUrl(expense: Expense): string {
+    if (!expense.photoStoragePath) {
+      return '';
+    }
+
+    const baseUrl = this.expensePhotoUrls()[expense.photoStoragePath];
+
+    if (!baseUrl) {
+      return '';
+    }
+
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${separator}v=${expense.updatedAt.toMillis()}`;
   }
 
   updateAnalyticsMode(mode: AnalyticsMode): void {
@@ -591,6 +703,8 @@ export class DashboardComponent {
 
   openEditExpense(expense: Expense): void {
     this.editError.set('');
+    this.clearEditExpensePhoto();
+    this.editExpensePhotoRemoved.set(false);
     this.expensePendingEdit.set(expense);
     this.editExpenseForm.reset({
       description: expense.description,
@@ -604,6 +718,8 @@ export class DashboardComponent {
 
   cancelEditExpense(): void {
     if (!this.isUpdatingExpense()) {
+      this.clearEditExpensePhoto();
+      this.editExpensePhotoRemoved.set(false);
       this.expensePendingEdit.set(null);
       this.editError.set('');
     }
@@ -635,14 +751,35 @@ export class DashboardComponent {
     this.editError.set('');
 
     try {
-      await this.expenseService.updateExpense(user.uid, expense.id, {
-        description: description.trim(),
-        amountCents: eurosToCents(amount),
-        category,
-        transactionType,
-        paymentMethod,
-        occurredAt: this.expenseService.dateToTimestamp(occurredAt),
-      });
+      const replacementPhoto = this.editExpensePhoto();
+      const photoUpdate: ExpensePhotoUpdate = replacementPhoto
+        ? { action: 'replace', file: replacementPhoto }
+        : this.editExpensePhotoRemoved() && expense.photoStoragePath
+          ? { action: 'remove' }
+          : { action: 'keep' };
+
+      await this.expenseService.updateExpense(
+        user.uid,
+        expense.id,
+        {
+          description: description.trim(),
+          amountCents: eurosToCents(amount),
+          category,
+          transactionType,
+          paymentMethod,
+          occurredAt: this.expenseService.dateToTimestamp(occurredAt),
+        },
+        photoUpdate,
+      );
+
+      if (photoUpdate.action === 'replace') {
+        this.refreshExpensePhotoUrl(
+          `users/${user.uid}/expenses/${expense.id}/receipt`,
+        );
+      }
+
+      this.clearEditExpensePhoto();
+      this.editExpensePhotoRemoved.set(false);
       this.expensePendingEdit.set(null);
     } catch (error: unknown) {
       this.editError.set(firebaseErrorMessage(error, this.language.current()));
@@ -770,7 +907,11 @@ export class DashboardComponent {
     this.deleteError.set('');
 
     try {
-      await this.expenseService.deleteExpense(user.uid, expense.id);
+      await this.expenseService.deleteExpense(
+        user.uid,
+        expense.id,
+        expense.photoStoragePath,
+      );
       this.expensePendingDelete.set(null);
     } catch (error: unknown) {
       this.deleteError.set(firebaseErrorMessage(error, this.language.current()));
@@ -875,6 +1016,79 @@ export class DashboardComponent {
       },
       { emitEvent: false },
     );
+  }
+
+  private setNewExpensePhoto(file: File): void {
+    this.revokePreviewUrl(this.newExpensePhotoPreviewUrl());
+    this.newExpensePhoto.set(file);
+    this.newExpensePhotoPreviewUrl.set(URL.createObjectURL(file));
+  }
+
+  private setEditExpensePhoto(file: File): void {
+    this.revokePreviewUrl(this.editExpensePhotoPreviewUrl());
+    this.editExpensePhoto.set(file);
+    this.editExpensePhotoPreviewUrl.set(URL.createObjectURL(file));
+  }
+
+  private revokePreviewUrl(url: string): void {
+    if (url) {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  private syncExpensePhotoUrls(expenses: Expense[]): void {
+    this.activePhotoPaths = new Set(
+      expenses.flatMap((expense) =>
+        expense.photoStoragePath ? [expense.photoStoragePath] : [],
+      ),
+    );
+    this.expensePhotoUrls.update((urls) =>
+      Object.fromEntries(
+        Object.entries(urls).filter(([path]) =>
+          this.activePhotoPaths.has(path),
+        ),
+      ),
+    );
+
+    for (const storagePath of this.activePhotoPaths) {
+      if (
+        this.expensePhotoUrls()[storagePath] ||
+        this.photoUrlRequests.has(storagePath)
+      ) {
+        continue;
+      }
+
+      this.loadExpensePhotoUrl(storagePath);
+    }
+  }
+
+  private refreshExpensePhotoUrl(storagePath: string): void {
+    this.expensePhotoUrls.update((urls) =>
+      Object.fromEntries(
+        Object.entries(urls).filter(([path]) => path !== storagePath),
+      ),
+    );
+    this.loadExpensePhotoUrl(storagePath);
+  }
+
+  private loadExpensePhotoUrl(storagePath: string): void {
+    if (this.photoUrlRequests.has(storagePath)) {
+      return;
+    }
+
+    this.photoUrlRequests.add(storagePath);
+    void this.expensePhotoService
+      .downloadUrl(storagePath)
+      .then((url) => {
+        if (this.activePhotoPaths.has(storagePath)) {
+          this.expensePhotoUrls.update((urls) => ({
+            ...urls,
+            [storagePath]: url,
+          }));
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => this.photoUrlRequests.delete(storagePath));
   }
 
   private donutSegmentPath(startAngle: number, endAngle: number): string {

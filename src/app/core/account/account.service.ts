@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import {
   collection,
   doc,
@@ -7,12 +7,17 @@ import {
 } from 'firebase/firestore';
 
 import { firestore } from '../firebase/firebase.client';
+import { ExpensePhotoService } from '../expenses/expense-photo';
 
 const DELETE_BATCH_SIZE = 450;
 
 @Injectable({ providedIn: 'root' })
 export class AccountService {
+  private readonly expensePhotoService = inject(ExpensePhotoService);
+
   async deleteUserData(userId: string): Promise<void> {
+    await this.expensePhotoService.deleteUserPhotos(userId);
+
     const [expenses, recurringExpenses] = await Promise.all([
       getDocs(collection(firestore, `users/${userId}/expenses`)),
       getDocs(collection(firestore, `users/${userId}/recurring-expenses`)),

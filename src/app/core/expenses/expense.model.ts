@@ -1,5 +1,10 @@
 import { Timestamp } from 'firebase/firestore';
 
+import {
+  ExpensePhotoContentType,
+  isExpensePhotoContentType,
+} from './expense-photo';
+
 export const EXPENSE_CATEGORIES = [
   'Food',
   'Transport',
@@ -29,6 +34,9 @@ export interface Expense {
   category: ExpenseCategory;
   transactionType: TransactionType;
   paymentMethod: PaymentMethod | null;
+  photoStoragePath?: string | null;
+  photoFileName?: string | null;
+  photoContentType?: ExpensePhotoContentType | null;
   occurredAt: Timestamp;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -50,13 +58,19 @@ export function normalizeExpense(
   return {
     ...(data as unknown as Omit<
       Expense,
-      'id' | 'transactionType' | 'paymentMethod'
+      | 'id'
+      | 'transactionType'
+      | 'paymentMethod'
+      | 'photoStoragePath'
+      | 'photoFileName'
+      | 'photoContentType'
     >),
     id,
     transactionType: data['transactionType'] === 'income' ? 'income' : 'expense',
     paymentMethod: isPaymentMethod(data['paymentMethod'])
       ? data['paymentMethod']
       : null,
+    ...normalizeExpensePhoto(data),
   };
 }
 
@@ -66,6 +80,31 @@ export function isExpenseTransaction(expense: Expense): boolean {
 
 function isPaymentMethod(value: unknown): value is PaymentMethod {
   return PAYMENT_METHODS.some((method) => method === value);
+}
+
+function normalizeExpensePhoto(data: Record<string, unknown>): Pick<
+  Expense,
+  'photoStoragePath' | 'photoFileName' | 'photoContentType'
+> {
+  const photoStoragePath = data['photoStoragePath'];
+  const photoFileName = data['photoFileName'];
+  const photoContentType = data['photoContentType'];
+
+  if (
+    typeof photoStoragePath === 'string' &&
+    photoStoragePath.length > 0 &&
+    typeof photoFileName === 'string' &&
+    photoFileName.length > 0 &&
+    isExpensePhotoContentType(photoContentType)
+  ) {
+    return { photoStoragePath, photoFileName, photoContentType };
+  }
+
+  return {
+    photoStoragePath: null,
+    photoFileName: null,
+    photoContentType: null,
+  };
 }
 
 export function eurosToCents(value: number | string): number {

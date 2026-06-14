@@ -723,6 +723,7 @@ h2 {
 
 :is(
   .transaction-type-field,
+  .expense-photo-field,
   .recurring-choice,
   .recurring-frequency,
   .error-message,
@@ -1370,6 +1371,15 @@ h2 {
 
   .expense-form-card form {
     grid-template-columns: 1fr;
+  }
+
+  .expense-photo-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .photo-upload-button {
+    text-align: center;
   }
 
   :is(.description-field, .payment-method-field, .category-field) {

@@ -303,6 +303,51 @@
               }
             </div>
 
+            @if (!expenseForm.controls.recurring.value) {
+              <div class="expense-photo-field">
+                <div class="expense-photo-heading">
+                  <div>
+                    <strong>{{ t('expense.photo') }}</strong>
+                    <small>{{ t('expense.photoDescription') }}</small>
+                  </div>
+                  <label class="photo-upload-button" for="expense-photo">
+                    {{ newExpensePhoto() ? t('expense.photoReplace') : t('expense.photoAdd') }}
+                  </label>
+                  <input
+                    id="expense-photo"
+                    class="visually-hidden"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    capture="environment"
+                    (change)="selectExpensePhoto($event, 'create')"
+                  >
+                </div>
+
+                @if (newExpensePhotoPreviewUrl(); as previewUrl) {
+                  <div class="photo-selection">
+                    <img [src]="previewUrl" [alt]="newExpensePhoto()?.name ?? ''">
+                    <div>
+                      <strong>{{ newExpensePhoto()?.name }}</strong>
+                      <small>{{ t('expense.photoReady') }}</small>
+                    </div>
+                    <button
+                      type="button"
+                      [attr.aria-label]="t('expense.photoRemove')"
+                      (click)="clearNewExpensePhoto()"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                }
+
+                @if (newExpensePhotoError(); as photoError) {
+                  <small class="field-error" role="alert">
+                    {{ expensePhotoErrorMessage(photoError) }}
+                  </small>
+                }
+              </div>
+            }
+
             <label class="recurring-choice">
               <input type="checkbox" formControlName="recurring">
               <span class="recurring-choice-control" aria-hidden="true">
@@ -1008,9 +1053,28 @@
                       <span class="transaction-date">
                         {{
                           timestampToDate(expense.occurredAt)
-                            | date: 'd MMM y' : undefined : language.locale()
+                          | date: 'd MMM y' : undefined : language.locale()
                         }}
                       </span>
+                      @if (expensePhotoUrl(expense); as photoUrl) {
+                        <a
+                          class="expense-photo-link"
+                          [href]="photoUrl"
+                          target="_blank"
+                          rel="noopener"
+                          [attr.aria-label]="
+                            t('expense.photoViewAria', {
+                              description: expense.description
+                            })
+                          "
+                        >
+                          <img
+                            [src]="photoUrl"
+                            [alt]="expense.photoFileName ?? t('expense.photo')"
+                          >
+                          <span>{{ t('expense.photoView') }}</span>
+                        </a>
+                      }
                     </div>
                   </div>
                   <strong
@@ -1490,6 +1554,75 @@
               <option [value]="category">{{ categoryLabel(category) }}</option>
             }
           </select>
+        </div>
+
+        <div class="edit-photo-field">
+          <div class="expense-photo-heading">
+            <div>
+              <strong>{{ t('expense.photo') }}</strong>
+              <small>{{ t('expense.photoDescription') }}</small>
+            </div>
+            <label class="photo-upload-button" for="edit-expense-photo">
+              {{
+                editExpensePhoto() || (!editExpensePhotoRemoved() && expense.photoStoragePath)
+                  ? t('expense.photoReplace')
+                  : t('expense.photoAdd')
+              }}
+            </label>
+            <input
+              id="edit-expense-photo"
+              class="visually-hidden"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              capture="environment"
+              (change)="selectExpensePhoto($event, 'edit')"
+            >
+          </div>
+
+          @if (editExpensePhotoPreviewUrl(); as previewUrl) {
+            <div class="photo-selection edit-photo-selection">
+              <img [src]="previewUrl" [alt]="editExpensePhoto()?.name ?? ''">
+              <div>
+                <strong>{{ editExpensePhoto()?.name }}</strong>
+                <small>{{ t('expense.photoReady') }}</small>
+              </div>
+              <button
+                type="button"
+                [attr.aria-label]="t('expense.photoRemove')"
+                (click)="removeEditExpensePhoto()"
+              >
+                &times;
+              </button>
+            </div>
+          } @else {
+            @if (!editExpensePhotoRemoved()) {
+              @if (expensePhotoUrl(expense); as existingPhotoUrl) {
+                <div class="photo-selection edit-photo-selection">
+                  <img
+                    [src]="existingPhotoUrl"
+                    [alt]="expense.photoFileName ?? t('expense.photo')"
+                  >
+                  <div>
+                    <strong>{{ expense.photoFileName }}</strong>
+                    <small>{{ t('expense.photoExisting') }}</small>
+                  </div>
+                  <button
+                    type="button"
+                    [attr.aria-label]="t('expense.photoRemove')"
+                    (click)="removeEditExpensePhoto()"
+                  >
+                    &times;
+                  </button>
+                </div>
+              }
+            }
+          }
+
+          @if (editExpensePhotoError(); as photoError) {
+            <small class="field-error" role="alert">
+              {{ expensePhotoErrorMessage(photoError) }}
+            </small>
+          }
         </div>
 
         @if (editError()) {
