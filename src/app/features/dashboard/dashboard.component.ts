@@ -29,6 +29,7 @@ import {
   CategoryBreakdown,
   AnalyticsFilters,
   AnalyticsMode,
+  AnalyticsTransactionType,
   availableTransactionYears,
   buildExpenseAnalytics,
 } from '../../core/expenses/expense-analytics';
@@ -126,6 +127,11 @@ export class DashboardComponent {
 
   readonly categories = EXPENSE_CATEGORIES;
   readonly transactionTypes = TRANSACTION_TYPES;
+  readonly analyticsTransactionTypes = [
+    'expense',
+    'income',
+    'merged',
+  ] as const;
   readonly paymentMethods = PAYMENT_METHODS;
   readonly months = Array.from({ length: 12 }, (_, value) => value);
   readonly isSaving = signal(false);
@@ -554,7 +560,9 @@ export class DashboardComponent {
     this.analyticsFilters.update((filters) => ({ ...filters, mode }));
   }
 
-  updateAnalyticsTransactionType(transactionType: TransactionType): void {
+  updateAnalyticsTransactionType(
+    transactionType: AnalyticsTransactionType,
+  ): void {
     this.analyticsFilters.update((filters) => ({
       ...filters,
       transactionType,

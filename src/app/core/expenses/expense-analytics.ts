@@ -7,13 +7,14 @@ import { formatMonthName } from '../i18n/date-labels';
 
 export type AnalyticsMode = 'month' | 'year';
 export type AnalyticsCategory = ExpenseCategory | 'All';
+export type AnalyticsTransactionType = TransactionType | 'merged';
 
 export interface AnalyticsFilters {
   mode: AnalyticsMode;
   year: number;
   month: number;
   category: AnalyticsCategory;
-  transactionType: TransactionType;
+  transactionType: AnalyticsTransactionType;
 }
 
 export interface AnalyticsPoint {
@@ -36,6 +37,8 @@ export interface ExpenseAnalytics {
   totalCents: number;
   previousTotalCents: number;
   changePercent: number | null;
+  incomeCents: number;
+  expenseCents: number;
   count: number;
   averageCents: number;
   topCategory: ExpenseCategory | null;
@@ -45,14 +48,18 @@ export interface ExpenseAnalytics {
 
 export function availableTransactionYears(
   expenses: Expense[],
-  transactionType: TransactionType,
+  transactionType: AnalyticsTransactionType,
   currentYear = new Date().getFullYear(),
   selectedYear = currentYear,
 ): number[] {
   const years = new Set<number>([currentYear, selectedYear]);
 
   expenses
-    .filter((expense) => expense.transactionType === transactionType)
+    .filter(
+      (expense) =>
+        transactionType === 'merged' ||
+        expense.transactionType === transactionType,
+    )
     .forEach((expense) => years.add(expense.occurredAt.toDate().getFullYear()));
 
   return [...years].sort((left, right) => right - left);
@@ -65,9 +72,20 @@ export function buildExpenseAnalytics(
 ): ExpenseAnalytics {
   const periodExpenses = filterForPeriod(expenses, filters);
   const previousExpenses = filterForPeriod(expenses, previousPeriod(filters));
-  const totalCents = sumExpenses(periodExpenses);
-  const previousTotalCents = sumExpenses(previousExpenses);
-  const categories = buildCategoryBreakdown(periodExpenses, totalCents);
+  const incomeCents = sumByType(periodExpenses, 'income');
+  const expenseCents = sumByType(periodExpenses, 'expense');
+  const previousIncomeCents = sumByType(previousExpenses, 'income');
+  const previousExpenseCents = sumByType(previousExpenses, 'expense');
+  const isMerged = filters.transactionType === 'merged';
+  const totalCents = isMerged
+    ? incomeCents - expenseCents
+    : sumExpenses(periodExpenses);
+  const previousTotalCents = isMerged
+    ? previousIncomeCents - previousExpenseCents
+    : sumExpenses(previousExpenses);
+  const categories = isMerged
+    ? []
+    : buildCategoryBreakdown(periodExpenses, totalCents);
 
   return {
     periodLabel:
@@ -77,36 +95,65 @@ export function buildExpenseAnalytics(
     chartLabel:
       locale === 'el-GR'
         ? filters.mode === 'month'
-          ? filters.transactionType === 'income'
-            ? 'Ημερήσια έσοδα'
-            : 'Ημερήσια έξοδα'
-          : filters.transactionType === 'income'
-            ? 'Μηνιαία έσοδα'
-            : 'Μηνιαία έξοδα'
+          ? filters.transactionType === 'merged'
+            ? 'Ημερήσιο καθαρό υπόλοιπο'
+            : filters.transactionType === 'income'
+              ? 'Ημερήσια έσοδα'
+              : 'Ημερήσια έξοδα'
+          : filters.transactionType === 'merged'
+            ? 'Μηνιαίο καθαρό υπόλοιπο'
+            : filters.transactionType === 'income'
+              ? 'Μηνιαία έσοδα'
+              : 'Μηνιαία έξοδα'
         : filters.mode === 'month'
-          ? filters.transactionType === 'income'
-            ? 'Daily income'
-            : 'Daily spending'
-          : filters.transactionType === 'income'
-            ? 'Monthly income'
-            : 'Monthly spending',
+          ? filters.transactionType === 'merged'
+            ? 'Daily net balance'
+            : filters.transactionType === 'income'
+              ? 'Daily income'
+              : 'Daily spending'
+          : filters.transactionType === 'merged'
+            ? 'Monthly net balance'
+            : filters.transactionType === 'income'
+              ? 'Monthly income'
+              : 'Monthly spending',
     totalCents,
     previousTotalCents,
-    changePercent: calculateChange(totalCents, previousTotalCents),
+    changePercent: isMerged
+      ? null
+      : calculateChange(totalCents, previousTotalCents),
+    incomeCents,
+    expenseCents,
     count: periodExpenses.length,
-    averageCents: periodExpenses.length ? Math.round(totalCents / periodExpenses.length) : 0,
+    averageCents:
+      !isMerged && periodExpenses.length
+        ? Math.round(totalCents / periodExpenses.length)
+        : 0,
     topCategory: categories[0]?.category ?? null,
     points:
       filters.mode === 'month'
-        ? buildDailyPoints(periodExpenses, filters.year, filters.month, locale)
-        : buildMonthlyPoints(periodExpenses, filters.year, locale),
+        ? buildDailyPoints(
+            periodExpenses,
+            filters.year,
+            filters.month,
+            locale,
+            filters.transactionType,
+          )
+        : buildMonthlyPoints(
+            periodExpenses,
+            filters.year,
+            locale,
+            filters.transactionType,
+          ),
     categories,
   };
 }
 
 function filterForPeriod(expenses: Expense[], filters: AnalyticsFilters): Expense[] {
   return expenses.filter((expense) => {
-    if (expense.transactionType !== filters.transactionType) {
+    if (
+      filters.transactionType !== 'merged' &&
+      expense.transactionType !== filters.transactionType
+    ) {
       return false;
     }
 
@@ -139,13 +186,14 @@ function buildDailyPoints(
   year: number,
   month: number,
   locale: string,
+  transactionType: AnalyticsTransactionType,
 ): AnalyticsPoint[] {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const totals = new Array<number>(daysInMonth).fill(0);
 
   expenses.forEach((expense) => {
     const day = expense.occurredAt.toDate().getDate();
-    totals[day - 1] += expense.amountCents;
+    totals[day - 1] += analyticsAmount(expense, transactionType);
   });
 
   return normalizePoints(
@@ -163,11 +211,15 @@ function buildMonthlyPoints(
   expenses: Expense[],
   year: number,
   locale: string,
+  transactionType: AnalyticsTransactionType,
 ): AnalyticsPoint[] {
   const totals = new Array<number>(12).fill(0);
 
   expenses.forEach((expense) => {
-    totals[expense.occurredAt.toDate().getMonth()] += expense.amountCents;
+    totals[expense.occurredAt.toDate().getMonth()] += analyticsAmount(
+      expense,
+      transactionType,
+    );
   });
 
   return normalizePoints(
@@ -182,11 +234,17 @@ function buildMonthlyPoints(
 function normalizePoints(
   points: Array<Omit<AnalyticsPoint, 'percentage'>>,
 ): AnalyticsPoint[] {
-  const maximum = Math.max(...points.map((point) => point.amountCents), 0);
+  const maximum = Math.max(
+    ...points.map((point) => Math.abs(point.amountCents)),
+    0,
+  );
 
   return points.map((point) => ({
     ...point,
-    percentage: maximum ? Math.max((point.amountCents / maximum) * 100, 3) : 0,
+    percentage:
+      maximum && point.amountCents
+        ? Math.max((Math.abs(point.amountCents) / maximum) * 100, 3)
+        : 0,
   }));
 }
 
@@ -215,6 +273,29 @@ function buildCategoryBreakdown(
 
 function sumExpenses(expenses: Expense[]): number {
   return expenses.reduce((total, expense) => total + expense.amountCents, 0);
+}
+
+function sumByType(expenses: Expense[], type: TransactionType): number {
+  return expenses.reduce(
+    (total, expense) =>
+      expense.transactionType === type
+        ? total + expense.amountCents
+        : total,
+    0,
+  );
+}
+
+function analyticsAmount(
+  expense: Expense,
+  transactionType: AnalyticsTransactionType,
+): number {
+  if (transactionType !== 'merged') {
+    return expense.amountCents;
+  }
+
+  return expense.transactionType === 'income'
+    ? expense.amountCents
+    : -expense.amountCents;
 }
 
 function calculateChange(current: number, previous: number): number | null {

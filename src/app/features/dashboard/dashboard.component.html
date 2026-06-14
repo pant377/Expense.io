@@ -534,9 +534,11 @@
           <div>
             <p class="eyebrow">
               {{
-                vm.analyticsFilters.transactionType === 'income'
-                  ? t('analytics.incomeEyebrow')
-                  : t('analytics.eyebrow')
+                vm.analyticsFilters.transactionType === 'merged'
+                  ? t('analytics.mergedEyebrow')
+                  : vm.analyticsFilters.transactionType === 'income'
+                    ? t('analytics.incomeEyebrow')
+                    : t('analytics.eyebrow')
               }}
             </p>
             <h2 id="analytics-title">
@@ -550,7 +552,7 @@
               role="group"
               [attr.aria-label]="t('analytics.transactionTypeAria')"
             >
-              @for (type of transactionTypes; track type) {
+              @for (type of analyticsTransactionTypes; track type) {
                 <button
                   type="button"
                   [class.active]="vm.analyticsFilters.transactionType === type"
@@ -560,9 +562,11 @@
                   (click)="updateAnalyticsTransactionType(type)"
                 >
                   {{
-                    type === 'income'
-                      ? t('analytics.incomeTab')
-                      : t('analytics.expensesTab')
+                    type === 'merged'
+                      ? t('analytics.mergedTab')
+                      : type === 'income'
+                        ? t('analytics.incomeTab')
+                        : t('analytics.expensesTab')
                   }}
                 </button>
               }
@@ -653,77 +657,118 @@
         </div>
 
         <div class="analytics-stats">
-          <article>
-            <span>
-              {{
-                vm.analyticsFilters.transactionType === 'income'
-                  ? t('analytics.totalIncome')
-                  : t('analytics.totalSpent')
-              }}
-            </span>
-            <strong>
-              {{
-                vm.analytics.totalCents / 100
-                  | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
-              }}
-            </strong>
-            @if (vm.analytics.changePercent === null) {
-              <small>
+          @if (vm.analyticsFilters.transactionType === 'merged') {
+            <article>
+              <span>{{ t('analytics.netBalance') }}</span>
+              <strong
+                [class.positive-money]="vm.analytics.totalCents > 0"
+                [class.negative-money]="vm.analytics.totalCents < 0"
+              >
+                {{
+                  vm.analytics.totalCents / 100
+                    | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                }}
+              </strong>
+              <small>{{ t('analytics.incomeMinusExpenses') }}</small>
+            </article>
+            <article>
+              <span>{{ t('analytics.totalIncome') }}</span>
+              <strong class="positive-money">
+                {{
+                  vm.analytics.incomeCents / 100
+                    | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                }}
+              </strong>
+              <small>{{ t('analytics.selectedPeriod') }}</small>
+            </article>
+            <article>
+              <span>{{ t('analytics.totalSpent') }}</span>
+              <strong class="negative-money">
+                {{
+                  vm.analytics.expenseCents / 100
+                    | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                }}
+              </strong>
+              <small>{{ t('analytics.selectedPeriod') }}</small>
+            </article>
+            <article>
+              <span>{{ t('analytics.transactions') }}</span>
+              <strong>{{ vm.analytics.count }}</strong>
+              <small>{{ t('analytics.selectedPeriod') }}</small>
+            </article>
+          } @else {
+            <article>
+              <span>
                 {{
                   vm.analyticsFilters.transactionType === 'income'
-                    ? t('analytics.noPreviousIncome')
-                    : t('analytics.noPrevious')
+                    ? t('analytics.totalIncome')
+                    : t('analytics.totalSpent')
                 }}
-              </small>
-            } @else {
-              <small
-                [class.change-up]="vm.analytics.changePercent > 0"
-                [class.change-down]="vm.analytics.changePercent < 0"
-              >
-                {{ vm.analytics.changePercent > 0 ? '+' : '' }}{{ vm.analytics.changePercent }}%
+              </span>
+              <strong>
                 {{
-                  t('analytics.vsPrevious', {
-                    period:
-                      vm.analyticsFilters.mode === 'month'
-                        ? t('analytics.previousMonth')
-                        : t('analytics.previousYear'),
-                  })
+                  vm.analytics.totalCents / 100
+                    | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
                 }}
-              </small>
-            }
-          </article>
-          <article>
-            <span>{{ t('analytics.transactions') }}</span>
-            <strong>{{ vm.analytics.count }}</strong>
-            <small>{{ t('analytics.selectedPeriod') }}</small>
-          </article>
-          <article>
-            <span>
-              {{
-                vm.analyticsFilters.transactionType === 'income'
-                  ? t('analytics.averageIncome')
-                  : t('analytics.average')
-              }}
-            </span>
-            <strong>
-              {{
-                vm.analytics.averageCents / 100
-                  | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
-              }}
-            </strong>
-            <small>{{ t('analytics.perTransaction') }}</small>
-          </article>
-          <article>
-            <span>{{ t('analytics.topCategory') }}</span>
-            <strong class="top-category">
-              {{
-                vm.analytics.topCategory
-                  ? categoryLabel(vm.analytics.topCategory)
-                  : t('analytics.noData')
-              }}
-            </strong>
-            <small>{{ t('analytics.byTotal') }}</small>
-          </article>
+              </strong>
+              @if (vm.analytics.changePercent === null) {
+                <small>
+                  {{
+                    vm.analyticsFilters.transactionType === 'income'
+                      ? t('analytics.noPreviousIncome')
+                      : t('analytics.noPrevious')
+                  }}
+                </small>
+              } @else {
+                <small
+                  [class.change-up]="vm.analytics.changePercent > 0"
+                  [class.change-down]="vm.analytics.changePercent < 0"
+                >
+                  {{ vm.analytics.changePercent > 0 ? '+' : '' }}{{ vm.analytics.changePercent }}%
+                  {{
+                    t('analytics.vsPrevious', {
+                      period:
+                        vm.analyticsFilters.mode === 'month'
+                          ? t('analytics.previousMonth')
+                          : t('analytics.previousYear'),
+                    })
+                  }}
+                </small>
+              }
+            </article>
+            <article>
+              <span>{{ t('analytics.transactions') }}</span>
+              <strong>{{ vm.analytics.count }}</strong>
+              <small>{{ t('analytics.selectedPeriod') }}</small>
+            </article>
+            <article>
+              <span>
+                {{
+                  vm.analyticsFilters.transactionType === 'income'
+                    ? t('analytics.averageIncome')
+                    : t('analytics.average')
+                }}
+              </span>
+              <strong>
+                {{
+                  vm.analytics.averageCents / 100
+                    | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                }}
+              </strong>
+              <small>{{ t('analytics.perTransaction') }}</small>
+            </article>
+            <article>
+              <span>{{ t('analytics.topCategory') }}</span>
+              <strong class="top-category">
+                {{
+                  vm.analytics.topCategory
+                    ? categoryLabel(vm.analytics.topCategory)
+                    : t('analytics.noData')
+                }}
+              </strong>
+              <small>{{ t('analytics.byTotal') }}</small>
+            </article>
+          }
         </div>
 
         <div class="analytics-grid">
@@ -731,7 +776,13 @@
             <div class="panel-heading">
               <div>
                 <h3>{{ vm.analytics.chartLabel }}</h3>
-                <p>{{ t('analytics.chartHint') }}</p>
+                <p>
+                  {{
+                    vm.analyticsFilters.transactionType === 'merged'
+                      ? t('analytics.mergedChartHint')
+                      : t('analytics.chartHint')
+                  }}
+                </p>
               </div>
               <span>{{ categoryLabel(vm.analyticsFilters.category) }}</span>
             </div>
@@ -740,6 +791,9 @@
               <div
                 class="spending-chart"
                 [class.daily-chart]="vm.analyticsFilters.mode === 'month'"
+                [class.merged-chart]="
+                  vm.analyticsFilters.transactionType === 'merged'
+                "
                 role="img"
                 [attr.aria-label]="
                   t('analytics.chartAria', {
@@ -762,11 +816,28 @@
                         | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale())
                     "
                   >
-                    <div class="bar-track">
+                    <div
+                      class="bar-track"
+                      [class.merged-track]="
+                        vm.analyticsFilters.transactionType === 'merged'
+                      "
+                    >
                       <span
                         class="bar-fill"
-                        [class.has-value]="point.amountCents > 0"
-                        [style.height.%]="point.percentage"
+                        [class.has-value]="point.amountCents !== 0"
+                        [class.positive-bar]="
+                          vm.analyticsFilters.transactionType === 'merged' &&
+                          point.amountCents > 0
+                        "
+                        [class.negative-bar]="
+                          vm.analyticsFilters.transactionType === 'merged' &&
+                          point.amountCents < 0
+                        "
+                        [style.height.%]="
+                          vm.analyticsFilters.transactionType === 'merged'
+                            ? point.percentage / 2
+                            : point.percentage
+                        "
                       ></span>
                     </div>
                     <small>
@@ -784,10 +855,11 @@
             </div>
           </article>
 
-          <article
-            class="breakdown-panel"
-            [class.pie-mode]="breakdownView() === 'pie'"
-          >
+          @if (vm.analyticsFilters.transactionType !== 'merged') {
+            <article
+              class="breakdown-panel"
+              [class.pie-mode]="breakdownView() === 'pie'"
+            >
             <div class="panel-heading">
               <div>
                 <h3>{{ t('analytics.breakdown') }}</h3>
@@ -944,7 +1016,8 @@
                 <p>{{ t('analytics.emptyDescription') }}</p>
               </div>
             }
-          </article>
+            </article>
+          }
         </div>
       </section>
 

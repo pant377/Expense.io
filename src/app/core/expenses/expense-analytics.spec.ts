@@ -100,6 +100,49 @@ describe('expense analytics', () => {
     expect(analytics.points[5].amountCents).toBe(250000);
   });
 
+  it('builds merged analytics as income minus expenses', () => {
+    const analytics = buildExpenseAnalytics(expenses, {
+      mode: 'year',
+      year: 2026,
+      month: 0,
+      category: 'All',
+      transactionType: 'merged',
+    });
+
+    expect(analytics.incomeCents).toBe(0);
+    expect(analytics.expenseCents).toBe(5000);
+    expect(analytics.totalCents).toBe(-5000);
+    expect(analytics.count).toBe(3);
+    expect(analytics.averageCents).toBe(0);
+    expect(analytics.topCategory).toBeNull();
+    expect(analytics.categories).toEqual([]);
+    expect(analytics.points[4].amountCents).toBe(-3000);
+    expect(analytics.points[5].amountCents).toBe(-2000);
+    expect(analytics.points[4].percentage).toBe(100);
+    expect(analytics.chartLabel).toBe('Monthly net balance');
+  });
+
+  it('nets income and expenses within the same merged chart point', () => {
+    const salary = {
+      ...expense('june-salary', 5000, 'FinancialExpenses', '2026-06-02'),
+      transactionType: 'income' as const,
+      paymentMethod: 'bankTransfer' as const,
+    };
+    const analytics = buildExpenseAnalytics([...expenses, salary], {
+      mode: 'month',
+      year: 2026,
+      month: 5,
+      category: 'All',
+      transactionType: 'merged',
+    });
+
+    expect(analytics.incomeCents).toBe(5000);
+    expect(analytics.expenseCents).toBe(2000);
+    expect(analytics.totalCents).toBe(3000);
+    expect(analytics.points[1].amountCents).toBe(3800);
+    expect(analytics.points[14].amountCents).toBe(-800);
+  });
+
   it('keeps income out of expense analytics', () => {
     const analytics = buildExpenseAnalytics(expenses, {
       mode: 'year',

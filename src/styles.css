@@ -639,8 +639,12 @@ app-dashboard .analytics-header-controls {
   gap: 0.6rem;
 }
 
+app-dashboard .analytics-header {
+  flex-wrap: wrap;
+}
+
 app-dashboard .analytics-header-controls .transaction-tabs {
-  grid-template-columns: repeat(2, minmax(92px, 1fr));
+  grid-template-columns: repeat(3, minmax(82px, 1fr));
 }
 
 app-dashboard
@@ -662,6 +666,40 @@ app-dashboard
   .analytics-stats
   .change-down {
   color: var(--danger);
+}
+
+app-dashboard .merged-track {
+  display: block;
+}
+
+app-dashboard .merged-track::after {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  z-index: 1;
+  height: 2px;
+  background: #82939c;
+  content: "";
+  transform: translateY(-1px);
+}
+
+app-dashboard .merged-track .bar-fill {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+}
+
+app-dashboard .merged-track .positive-bar {
+  bottom: 50%;
+  background: linear-gradient(180deg, #19a99c, var(--primary-dark));
+  border-radius: 7px 7px 0 0;
+}
+
+app-dashboard .merged-track .negative-bar {
+  top: 50%;
+  background: linear-gradient(180deg, #c84444, #9f3030);
+  border-radius: 0 0 7px 7px;
 }
 
 app-dashboard .edit-photo-field {
@@ -1803,7 +1841,7 @@ app-dashboard .expense-item.income-transaction:hover {
 @media (max-width: 600px) {
   app-dashboard .analytics-header-controls {
     width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     display: grid;
   }
 
