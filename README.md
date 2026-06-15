@@ -13,6 +13,7 @@ Cloud Storage. Each account can only access data stored under its own Firebase u
 - Currency-safe amounts stored as integer cents
 - Firebase Local Emulator Suite configuration
 - Firebase Hosting configuration
+- Spending-limit email alerts through a Firestore-triggered Cloud Function
 
 ## Local development
 
@@ -84,6 +85,74 @@ npm run firebase:deploy
 Firebase Web App configuration is public in the compiled browser application by design, but it is
 kept out of source control here. User data is protected by Authentication and the rules in
 `firestore.rules` and `storage.rules`; never replace those rules with unrestricted access.
+
+## Email alert configuration
+
+The `checkSpendingLimits` function reads SMTP credentials from the `SMTP_CONFIG` JSON secret.
+Create or update it from the repository root:
+
+```bash
+firebase functions:secrets:set SMTP_CONFIG --format json
+```
+
+Enter one JSON object when prompted:
+
+```json
+{
+  "host": "smtp.example.com",
+  "port": 587,
+  "secure": false,
+  "user": "smtp-user",
+  "pass": "smtp-password",
+  "from": "Expense.io <alerts@example.com>"
+}
+```
+
+
+
+Use port `465` with `"secure": true`, or port `587` with `"secure": false`, according to the
+SMTP provider. The `from` address must be permitted by that provider. Deploy the updated function
+after creating the secret:
+
+```bash
+firebase deploy --only functions:checkSpendingLimits
+```
+
+For emulator delivery tests, copy `functions/.secret.local.example` to
+`functions/.secret.local` and replace the placeholders. Without that local file, the emulator
+writes `last-sent-email.html` and logs the simulated message instead of connecting to SMTP.
+
+### Configure Gmail
+
+Gmail SMTP requires 2-Step Verification and a 16-character App Password. Do not use the normal
+Google Account password.
+
+1. Enable 2-Step Verification for the Google Account.
+2. Open Google Account security settings and create an App Password for Expense.io.
+3. Create the local secret file:
+
+```powershell
+Copy-Item functions\.secret.local.example functions\.secret.local
+```
+
+4. Replace the email address and App Password in `functions/.secret.local`:
+
+```dotenv
+SMTP_CONFIG={"host":"smtp.gmail.com","port":587,"secure":false,"user":"YOUR_ADDRESS@gmail.com","pass":"YOUR_16_CHARACTER_APP_PASSWORD","from":"Expense.io <YOUR_ADDRESS@gmail.com>"}
+```
+
+Restart the Firebase emulators after editing the file. Spaces displayed between groups in the App
+Password can be omitted.
+
+For production, create the same JSON value in Secret Manager:
+
+```powershell
+firebase functions:secrets:set SMTP_CONFIG --format json
+firebase deploy --only functions:checkSpendingLimits
+```
+
+The authenticated Gmail address should also be used in `from`. Google Workspace accounts may
+restrict App Passwords through administrator policy.
 
 ## Data model
 

@@ -1,4 +1,5 @@
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
+import { defineJsonSecret } from 'firebase-functions/params';
 import * as admin from 'firebase-admin';
 import * as nodemailer from 'nodemailer';
 import * as fs from 'fs';
@@ -6,17 +7,6 @@ import * as path from 'path';
 
 admin.initializeApp();
 const db = admin.firestore();
-
-// Setup standard Nodemailer Transporter (for local emulator or custom SMTP)
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.ethereal.email',
-  port: parseInt(process.env.SMTP_PORT || '587', 10),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER || '',
-    pass: process.env.SMTP_PASS || '',
-  },
-});
 
 interface SpendingLimits {
   dailyLimitCents: number | null;
@@ -30,12 +20,70 @@ interface SpendingLimits {
   };
 }
 
+interface SmtpConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+  from: string;
+  allowSelfSignedCertificate?: boolean;
+}
+
+const smtpConfig = defineJsonSecret<SmtpConfig>('SMTP_CONFIG');
+
+function getSmtpConfig(isEmulator: boolean): SmtpConfig | null {
+  if (!process.env.SMTP_CONFIG) {
+    if (isEmulator) {
+      return null;
+    }
+
+    throw new Error('SMTP_CONFIG is not available to the function runtime.');
+  }
+
+  const config = smtpConfig.value();
+  const hasValidStrings =
+    typeof config.host === 'string' &&
+    config.host.trim().length > 0 &&
+    typeof config.user === 'string' &&
+    config.user.trim().length > 0 &&
+    typeof config.pass === 'string' &&
+    config.pass.length > 0 &&
+    typeof config.from === 'string' &&
+    config.from.trim().length > 0;
+  const hasValidPort = Number.isInteger(config.port) && config.port > 0 && config.port <= 65535;
+
+  if (!hasValidStrings || !hasValidPort || typeof config.secure !== 'boolean') {
+    throw new Error(
+      'SMTP_CONFIG must contain host, port, secure, user, pass, and from values.'
+    );
+  }
+
+  const isLoopbackHost = config.host === '127.0.0.1' || config.host === 'localhost';
+  if (config.allowSelfSignedCertificate && (!isEmulator || !isLoopbackHost)) {
+    throw new Error(
+      'allowSelfSignedCertificate can only be used by the emulator with a loopback SMTP host.'
+    );
+  }
+
+  return {
+    ...config,
+    host: config.host.trim(),
+    user: config.user.trim(),
+    from: config.from.trim(),
+  };
+}
+
 /**
  * Triggered on creation of an expense.
  * Calculates spending levels and triggers email alerts if user-defined thresholds are crossed.
  */
 export const checkSpendingLimits = onDocumentCreated(
-  'users/{userId}/expenses/{expenseId}',
+  {
+    document: 'users/{userId}/expenses/{expenseId}',
+    region: 'europe-west1',
+    secrets: [smtpConfig],
+  },
   async (event) => {
     const userId = event.params.userId;
     const expenseData = event.data?.data();
@@ -173,21 +221,11 @@ export const checkSpendingLimits = onDocumentCreated(
       return;
     }
 
-    // 5. Update Alert State History in Firestore (using Admin SDK to bypass rules)
+    // Prepare the alert state, but persist it only after the email succeeds.
     const updatedDailyState = { ...dailyState, [dayKey]: [...sentDailyAlerts, ...newDailyAlerts] };
     const updatedMonthlyState = { ...monthlyState, [monthKey]: [...sentMonthlyAlerts, ...newMonthlyAlerts] };
 
-    await db.doc(`users/${userId}/settings/spending-limits`).set(
-      {
-        alertState: {
-          daily: updatedDailyState,
-          monthly: updatedMonthlyState,
-        },
-      },
-      { merge: true }
-    );
-
-    // 6. Build and Send the Alert Email
+    // 5. Build and send the alert email
     const dailyStatus = dailyLimit
       ? {
           spent: dailySpentCents / 100,
@@ -223,27 +261,54 @@ export const checkSpendingLimits = onDocumentCreated(
       }
     }
 
-    // Send the email
     const subject = buildEmailSubject(newDailyAlerts, newMonthlyAlerts);
-    try {
-      if (!process.env.SMTP_USER && isEmulator) {
-        console.log(`[Emulator Log] Email alert would be sent to: ${userEmail}`);
-        console.log(`Subject: ${subject}`);
-        console.log('Setup SMTP environment variables in your functions config to test actual sending.');
-        return;
-      }
+    const config = getSmtpConfig(isEmulator);
 
-      await transporter.sendMail({
-        from: '"Expense.io Spending Guard" <noreply@expense.io>',
-        to: userEmail,
-        subject: subject,
-        html: htmlContent,
+    if (!config) {
+      console.log(`[Emulator Log] Email alert would be sent to: ${userEmail}`);
+      console.log(`Subject: ${subject}`);
+      console.log('Add SMTP_CONFIG to functions/.secret.local to test actual sending.');
+    } else {
+      const transporter = nodemailer.createTransport({
+        host: config.host,
+        port: config.port,
+        secure: config.secure,
+        auth: {
+          user: config.user,
+          pass: config.pass,
+        },
+        tls: config.allowSelfSignedCertificate
+          ? {
+              rejectUnauthorized: false,
+            }
+          : undefined,
       });
 
-      console.log(`Successfully sent email alert to ${userEmail} for threshold crossings.`);
-    } catch (mailError) {
-      console.error('Error occurred while sending limit alert email:', mailError);
+      try {
+        await transporter.sendMail({
+          from: config.from,
+          to: userEmail,
+          subject,
+          html: htmlContent,
+        });
+
+        console.log(`Successfully sent email alert to ${userEmail} for threshold crossings.`);
+      } catch (mailError) {
+        console.error('Error occurred while sending limit alert email:', mailError);
+        throw mailError;
+      }
     }
+
+    // 6. Record sent alerts only after delivery or emulator simulation succeeds.
+    await db.doc(`users/${userId}/settings/spending-limits`).set(
+      {
+        alertState: {
+          daily: updatedDailyState,
+          monthly: updatedMonthlyState,
+        },
+      },
+      { merge: true }
+    );
   }
 );
 

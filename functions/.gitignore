@@ -3,3 +3,6 @@ node_modules/
 
 # Ignore compiled output
 lib/
+
+# Ignore local Secret Manager emulator overrides
+.secret.local
