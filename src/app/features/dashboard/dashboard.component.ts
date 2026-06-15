@@ -235,6 +235,10 @@ export class DashboardComponent {
       [Validators.min(0.01), Validators.max(1_000_000_000)],
     ],
     excludeIncome: [true],
+    emailAlertsEnabled: [false],
+    alertThreshold50: [false],
+    alertThreshold80: [false],
+    alertThreshold99: [false],
   });
 
   readonly deleteAccountForm = this.formBuilder.group({
@@ -464,8 +468,20 @@ export class DashboardComponent {
       return;
     }
 
-    const { dailyLimit, monthlyLimit, excludeIncome } =
-      this.spendingLimitForm.getRawValue();
+    const {
+      dailyLimit,
+      monthlyLimit,
+      excludeIncome,
+      emailAlertsEnabled,
+      alertThreshold50,
+      alertThreshold80,
+      alertThreshold99,
+    } = this.spendingLimitForm.getRawValue();
+
+    const alertThresholds: number[] = [];
+    if (alertThreshold50) alertThresholds.push(50);
+    if (alertThreshold80) alertThresholds.push(80);
+    if (alertThreshold99) alertThresholds.push(99);
 
     this.isSavingLimits.set(true);
     this.limitError.set('');
@@ -477,7 +493,9 @@ export class DashboardComponent {
           dailyLimit === null ? null : eurosToCents(dailyLimit),
         monthlyLimitCents:
           monthlyLimit === null ? null : eurosToCents(monthlyLimit),
-        excludeIncome,
+        excludeIncome: excludeIncome ?? true,
+        emailAlertsEnabled: emailAlertsEnabled ?? false,
+        alertThresholds,
       });
       this.spendingLimitForm.markAsPristine();
       this.limitSuccess.set(this.t('limits.saved'));
@@ -1153,6 +1171,10 @@ export class DashboardComponent {
             ? null
             : limits.monthlyLimitCents / 100,
         excludeIncome: limits.excludeIncome,
+        emailAlertsEnabled: limits.emailAlertsEnabled || false,
+        alertThreshold50: (limits.alertThresholds || []).includes(50),
+        alertThreshold80: (limits.alertThresholds || []).includes(80),
+        alertThreshold99: (limits.alertThresholds || []).includes(99),
       },
       { emitEvent: false },
     );

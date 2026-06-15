@@ -32,6 +32,8 @@ describe('spending limits', () => {
     dailyLimitCents: 2000,
     monthlyLimitCents: 10000,
     excludeIncome: true,
+    emailAlertsEnabled: false,
+    alertThresholds: [],
   };
 
   it('calculates daily and monthly usage for the current periods', () => {
@@ -60,6 +62,8 @@ describe('spending limits', () => {
         dailyLimitCents: null,
         monthlyLimitCents: null,
         excludeIncome: true,
+        emailAlertsEnabled: false,
+        alertThresholds: [],
       },
       new Date('2026-06-13T18:00:00'),
     );

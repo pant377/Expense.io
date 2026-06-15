@@ -47,6 +47,14 @@ export class SpendingLimitService {
                 typeof data['excludeIncome'] === 'boolean'
                   ? data['excludeIncome']
                   : true,
+              emailAlertsEnabled:
+                typeof data['emailAlertsEnabled'] === 'boolean'
+                  ? data['emailAlertsEnabled']
+                  : false,
+              alertThresholds:
+                Array.isArray(data['alertThresholds'])
+                  ? data['alertThresholds']
+                  : [],
             });
           }),
         (error) => this.zone.run(() => subscriber.error(error)),
@@ -64,6 +72,6 @@ export class SpendingLimitService {
     await setDoc(limitsReference, {
       ...limits,
       updatedAt: serverTimestamp(),
-    });
+    }, { merge: true });
   }
 }

@@ -1553,6 +1553,39 @@
             </span>
           </label>
 
+          <label class="limit-income-toggle limit-email-alerts-toggle">
+            <input type="checkbox" formControlName="emailAlertsEnabled">
+            <span class="limit-income-toggle-control" aria-hidden="true">
+              <span></span>
+            </span>
+            <span>
+              <strong>{{ t('limits.emailAlertsTitle') }}</strong>
+              <small>{{ t('limits.emailAlertsDescription') }}</small>
+            </span>
+          </label>
+
+          @if (spendingLimitForm.get('emailAlertsEnabled')?.value) {
+            <div class="limit-thresholds-container">
+              <div class="limit-thresholds-grid">
+                <label class="threshold-checkbox-card">
+                  <input type="checkbox" formControlName="alertThreshold50">
+                  <span class="threshold-checkbox-indicator"></span>
+                  <span class="threshold-label">{{ t('limits.alertThreshold50') }}</span>
+                </label>
+                <label class="threshold-checkbox-card">
+                  <input type="checkbox" formControlName="alertThreshold80">
+                  <span class="threshold-checkbox-indicator"></span>
+                  <span class="threshold-label">{{ t('limits.alertThreshold80') }}</span>
+                </label>
+                <label class="threshold-checkbox-card">
+                  <input type="checkbox" formControlName="alertThreshold99">
+                  <span class="threshold-checkbox-indicator"></span>
+                  <span class="threshold-label">{{ t('limits.alertThreshold99') }}</span>
+                </label>
+              </div>
+            </div>
+          }
+
           @if (spendingLimitForm.invalid && spendingLimitForm.touched) {
             <p class="limit-validation" role="alert">{{ t('limits.invalid') }}</p>
           }

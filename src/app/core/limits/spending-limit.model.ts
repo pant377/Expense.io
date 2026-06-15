@@ -4,6 +4,8 @@ export interface SpendingLimits {
   dailyLimitCents: number | null;
   monthlyLimitCents: number | null;
   excludeIncome: boolean;
+  emailAlertsEnabled: boolean;
+  alertThresholds: number[];
 }
 
 export interface SpendingLimitStatus {
@@ -25,6 +27,8 @@ export const EMPTY_SPENDING_LIMITS: SpendingLimits = {
   dailyLimitCents: null,
   monthlyLimitCents: null,
   excludeIncome: true,
+  emailAlertsEnabled: false,
+  alertThresholds: [],
 };
 
 export function buildSpendingLimitSummary(

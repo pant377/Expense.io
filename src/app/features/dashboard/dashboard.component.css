@@ -1707,3 +1707,111 @@ h2 {
   text-align: center;
   font-size: 0.9rem;
 }
+
+/* Email Alerts Settings */
+.limit-settings-form .limit-email-alerts-toggle,
+.limit-settings-form .limit-thresholds-container {
+  grid-column: 1 / -1;
+}
+
+.limit-thresholds-container {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+  grid-column: 1 / -1;
+  animation: fade-in 180ms ease-out;
+}
+
+.limit-thresholds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.65rem;
+}
+
+.threshold-checkbox-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  background: #f7f9f9;
+  border: 1px solid #edf1f3;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  user-select: none;
+}
+
+:host-context([data-theme="dark"]) .threshold-checkbox-card {
+  background: #1b2d34;
+  border-color: #2b3d45;
+}
+
+.threshold-checkbox-card:hover {
+  background: #edf5f3;
+  border-color: #c4dfda;
+}
+
+:host-context([data-theme="dark"]) .threshold-checkbox-card:hover {
+  background: #20353e;
+  border-color: #38515c;
+}
+
+.threshold-checkbox-card input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.threshold-checkbox-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #b2c4cb;
+  border-radius: 4px;
+  transition: all 120ms ease;
+  flex-shrink: 0;
+}
+
+:host-context([data-theme="dark"]) .threshold-checkbox-indicator {
+  border-color: #526f7c;
+}
+
+.threshold-checkbox-card input:checked + .threshold-checkbox-indicator {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+:host-context([data-theme="dark"]) .threshold-checkbox-card input:checked + .threshold-checkbox-indicator {
+  border-color: #2bb8aa;
+  background: #2bb8aa;
+}
+
+.threshold-checkbox-card input:checked + .threshold-checkbox-indicator::after {
+  content: "";
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-0.5px, -1px);
+}
+
+.threshold-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Active checked card style using modern CSS */
+.threshold-checkbox-card:has(input:checked) {
+  border-color: #a0d8d0;
+  background: #f0f7f6;
+}
+
+:host-context([data-theme="dark"]) .threshold-checkbox-card:has(input:checked) {
+  border-color: #2bb8aa;
+  background: #193a3a;
+}
+

@@ -100,12 +100,17 @@ service cloud.firestore {
           'dailyLimitCents',
           'monthlyLimitCents',
           'excludeIncome',
+          'emailAlertsEnabled',
+          'alertThresholds',
+          'alertState',
           'updatedAt'
         ])
         && request.resource.data.keys().hasAll([
           'dailyLimitCents',
           'monthlyLimitCents',
           'excludeIncome',
+          'emailAlertsEnabled',
+          'alertThresholds',
           'updatedAt'
         ])
         && (
@@ -125,6 +130,12 @@ service cloud.firestore {
           )
         )
         && request.resource.data.excludeIncome is bool
+        && request.resource.data.emailAlertsEnabled is bool
+        && request.resource.data.alertThresholds is list
+        && (
+          !request.resource.data.keys().hasAny(['alertState'])
+          || request.resource.data.alertState is map
+        )
         && request.resource.data.updatedAt is timestamp;
     }
 
