@@ -58,19 +58,9 @@ service cloud.firestore {
         && request.resource.data.amountCents is int
         && request.resource.data.amountCents > 0
         && request.resource.data.amountCents <= 100000000000
-        && request.resource.data.category in [
-          'Food',
-          'Transport',
-          'Vehicle',
-          'Home',
-          'Health',
-          'Leisure',
-          'Subscriptions',
-          'FinancialExpenses',
-          'Investments',
-          'Gift',
-          'Other'
-        ]
+        && request.resource.data.category is string
+        && request.resource.data.category.size() > 0
+        && request.resource.data.category.size() <= 50
         && request.resource.data.transactionType in ['expense', 'income']
         && (
           request.resource.data.paymentMethod == null
@@ -138,6 +128,19 @@ service cloud.firestore {
         && request.resource.data.updatedAt is timestamp;
     }
 
+    function validCustomCategories() {
+      return request.resource.data.keys().hasOnly([
+          'categories',
+          'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'categories',
+          'updatedAt'
+        ])
+        && request.resource.data.categories is list
+        && request.resource.data.updatedAt is timestamp;
+    }
+
     function validRecurringExpense() {
       return request.resource.data.keys().hasOnly([
           'description',
@@ -171,19 +174,9 @@ service cloud.firestore {
         && request.resource.data.amountCents is int
         && request.resource.data.amountCents > 0
         && request.resource.data.amountCents <= 100000000000
-        && request.resource.data.category in [
-          'Food',
-          'Transport',
-          'Vehicle',
-          'Home',
-          'Health',
-          'Leisure',
-          'Subscriptions',
-          'FinancialExpenses',
-          'Investments',
-          'Gift',
-          'Other'
-        ]
+        && request.resource.data.category is string
+        && request.resource.data.category.size() > 0
+        && request.resource.data.category.size() <= 50
         && request.resource.data.transactionType in ['expense', 'income']
         && (
           request.resource.data.paymentMethod == null
@@ -223,6 +216,12 @@ service cloud.firestore {
       match /settings/spending-limits {
         allow read: if signedInAs(userId);
         allow create, update: if signedInAs(userId) && validSpendingLimits();
+        allow delete: if signedInAs(userId);
+      }
+
+      match /settings/custom-categories {
+        allow read: if signedInAs(userId);
+        allow create, update: if signedInAs(userId) && validCustomCategories();
         allow delete: if signedInAs(userId);
       }
     }

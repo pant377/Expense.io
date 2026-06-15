@@ -19,7 +19,7 @@ export const EXPENSE_CATEGORIES = [
   'Other',
 ] as const;
 
-export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
+export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number] | string;
 
 export const TRANSACTION_TYPES = ['expense', 'income'] as const;
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];

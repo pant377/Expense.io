@@ -21,6 +21,8 @@ import {
   tap,
 } from 'rxjs';
 
+import { CustomCategoryService } from '../../core/expenses/custom-category.service';
+
 import { AccountService } from '../../core/account/account.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { firebaseErrorMessage } from '../../core/errors/firebase-error';
@@ -120,10 +122,16 @@ export class DashboardComponent {
   private readonly expensePhotoService = inject(ExpensePhotoService);
   private readonly recurringExpenseService = inject(RecurringExpenseService);
   private readonly spendingLimitService = inject(SpendingLimitService);
+  private readonly customCategoryService = inject(CustomCategoryService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   readonly language = inject(LanguageService);
   readonly theme = inject(ThemeService);
+
+  readonly customCategories = signal<string[]>([]);
+  get allCategories(): string[] {
+    return [...EXPENSE_CATEGORIES, ...this.customCategories()];
+  }
 
   readonly categories = EXPENSE_CATEGORIES;
   readonly transactionTypes = TRANSACTION_TYPES;
@@ -268,14 +276,22 @@ export class DashboardComponent {
           }),
         );
 
+      const customCategories$ = this.customCategoryService
+        .watchCustomCategories(user.uid)
+        .pipe(
+          tap((categories) => this.customCategories.set(categories)),
+          catchError(() => of([] as string[])),
+        );
+
       return combineLatest([
         this.expenseService.watchExpenses(user.uid).pipe(
           tap((expenses) => this.syncExpensePhotoUrls(expenses)),
         ),
         limits$,
         recurringSchedules$,
+        customCategories$,
       ]).pipe(
-        map(([expenses, limits, recurringSchedules]) => {
+        map(([expenses, limits, recurringSchedules, customCategories]) => {
           const totalExpenseCents = this.totalForType(expenses, 'expense');
           const totalIncomeCents = this.totalForType(expenses, 'income');
           const monthExpenseCents = this.currentMonthTotal(expenses, 'expense');
@@ -286,6 +302,7 @@ export class DashboardComponent {
             expenses,
             limits,
             recurringSchedules,
+            customCategories,
             totalExpenseCents,
             totalIncomeCents,
             monthExpenseCents,
@@ -301,6 +318,7 @@ export class DashboardComponent {
             expenses: [] as Expense[],
             limits: { ...EMPTY_SPENDING_LIMITS },
             recurringSchedules: [] as RecurringExpenseSchedule[],
+            customCategories: [] as string[],
             totalExpenseCents: 0,
             totalIncomeCents: 0,
             monthExpenseCents: 0,
@@ -610,7 +628,105 @@ export class DashboardComponent {
   }
 
   categoryColor(category: ExpenseCategory): string {
-    return this.categoryColors[category];
+    return this.categoryColors[category as keyof typeof this.categoryColors] || '#718096';
+  }
+
+  readonly categoryError = signal('');
+  readonly dropdownCategoryError = signal('');
+  readonly isSavingCategory = signal(false);
+
+  async addCustomCategoryFromDropdown(nameInput: HTMLInputElement, event: Event): Promise<void> {
+    event.stopPropagation();
+    event.preventDefault();
+    const name = nameInput.value.trim();
+    if (!name || name.length > 50) {
+      this.dropdownCategoryError.set(this.t('settings.categoryInvalid'));
+      return;
+    }
+
+    const exists = this.allCategories.some(
+      (cat) => cat.toLowerCase() === name.toLowerCase(),
+    );
+    if (exists) {
+      this.dropdownCategoryError.set(this.t('settings.categoryExists'));
+      return;
+    }
+
+    const user = this.authService.currentUser;
+    if (!user) {
+      return;
+    }
+
+    this.dropdownCategoryError.set('');
+
+    try {
+      const updated = [...this.customCategories(), name];
+      await this.customCategoryService.saveCustomCategories(user.uid, updated);
+      nameInput.value = '';
+      this.expenseForm.controls.category.setValue(name);
+      this.categoryMenuOpen.set(false);
+    } catch (error: unknown) {
+      this.dropdownCategoryError.set(
+        firebaseErrorMessage(error, this.language.current()),
+      );
+    }
+  }
+
+  async addCustomCategory(nameInput: HTMLInputElement): Promise<void> {
+    const name = nameInput.value.trim();
+    if (!name || name.length > 50) {
+      this.categoryError.set(this.t('settings.categoryInvalid'));
+      return;
+    }
+
+    const exists = this.allCategories.some(
+      (cat) => cat.toLowerCase() === name.toLowerCase(),
+    );
+    if (exists) {
+      this.categoryError.set(this.t('settings.categoryExists'));
+      return;
+    }
+
+    const user = this.authService.currentUser;
+    if (!user) {
+      return;
+    }
+
+    this.isSavingCategory.set(true);
+    this.categoryError.set('');
+
+    try {
+      const updated = [...this.customCategories(), name];
+      await this.customCategoryService.saveCustomCategories(user.uid, updated);
+      nameInput.value = '';
+    } catch (error: unknown) {
+      this.categoryError.set(
+        firebaseErrorMessage(error, this.language.current()),
+      );
+    } finally {
+      this.isSavingCategory.set(false);
+    }
+  }
+
+  async deleteCustomCategory(category: string): Promise<void> {
+    const user = this.authService.currentUser;
+    if (!user) {
+      return;
+    }
+
+    this.isSavingCategory.set(true);
+    this.categoryError.set('');
+
+    try {
+      const updated = this.customCategories().filter((cat) => cat !== category);
+      await this.customCategoryService.saveCustomCategories(user.uid, updated);
+    } catch (error: unknown) {
+      this.categoryError.set(
+        firebaseErrorMessage(error, this.language.current()),
+      );
+    } finally {
+      this.isSavingCategory.set(false);
+    }
   }
 
   setHoveredPieCategory(category: CategoryBreakdown | null): void {

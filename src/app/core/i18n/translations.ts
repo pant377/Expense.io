@@ -270,6 +270,11 @@ const EN_TRANSLATIONS = {
   'payment.card': 'Card',
   'payment.bankTransfer': 'Bank transfer',
   'payment.unspecified': 'Not specified',
+  'settings.customCategories': 'Custom Categories',
+  'settings.addCategory': 'Add category',
+  'settings.categoryName': 'Add custom category here',
+  'settings.categoryExists': 'Category already exists.',
+  'settings.categoryInvalid': 'Enter a valid category (1-50 characters).',
 } as const;
 
 export type TranslationKey = keyof typeof EN_TRANSLATIONS;
@@ -546,6 +551,11 @@ const EL_TRANSLATIONS: Record<TranslationKey, string> = {
   'payment.card': 'Κάρτα',
   'payment.bankTransfer': 'Τραπεζική μεταφορά',
   'payment.unspecified': 'Δεν έχει οριστεί',
+  'settings.customCategories': 'Προσαρμοσμένες Κατηγορίες',
+  'settings.addCategory': 'Προσθήκη κατηγορίας',
+  'settings.categoryName': 'Προσθήκη κατηγορίας',
+  'settings.categoryExists': 'Η κατηγορία υπάρχει ήδη.',
+  'settings.categoryInvalid': 'Εισάγετε έγκυρη κατηγορία (1-50 χαρακτήρες).',
 };
 
 const TRANSLATIONS: Record<AppLanguage, Record<TranslationKey, string>> = {

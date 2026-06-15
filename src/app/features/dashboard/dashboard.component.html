@@ -281,24 +281,44 @@
               </button>
 
               @if (categoryMenuOpen()) {
-                <div class="category-menu" role="listbox" aria-labelledby="category-label">
-                  @for (category of categories; track category) {
+                <div class="category-menu" role="listbox" aria-labelledby="category-label" (click)="$event.stopPropagation()">
+                  <div class="dropdown-add-category">
+                    <input
+                      #dropdownCatInput
+                      type="text"
+                      placeholder="{{ t('settings.categoryName') }}"
+                      (keydown.enter)="addCustomCategoryFromDropdown(dropdownCatInput, $event)"
+                      maxlength="50"
+                    >
                     <button
                       type="button"
-                      role="option"
-                      [attr.aria-selected]="expenseForm.controls.category.value === category"
-                      [class.selected]="expenseForm.controls.category.value === category"
-                      (click)="selectCategory(category, $event)"
+                      (click)="addCustomCategoryFromDropdown(dropdownCatInput, $event)"
                     >
-                      <span class="category-choice-icon" [attr.data-category]="category">
-                        <app-category-icon [category]="category" />
-                      </span>
-                      <span>{{ categoryLabel(category) }}</span>
-                      @if (expenseForm.controls.category.value === category) {
-                        <span class="selected-check" aria-hidden="true">&#10003;</span>
-                      }
+                      +
                     </button>
+                  </div>
+                  @if (dropdownCategoryError()) {
+                    <p class="dropdown-category-error" role="alert">{{ dropdownCategoryError() }}</p>
                   }
+                  <div class="category-menu-items">
+                    @for (category of allCategories; track category) {
+                      <button
+                        type="button"
+                        role="option"
+                        [attr.aria-selected]="expenseForm.controls.category.value === category"
+                        [class.selected]="expenseForm.controls.category.value === category"
+                        (click)="selectCategory(category, $event)"
+                      >
+                        <span class="category-choice-icon" [attr.data-category]="category">
+                          <app-category-icon [category]="category" />
+                        </span>
+                        <span>{{ categoryLabel(category) }}</span>
+                        @if (expenseForm.controls.category.value === category) {
+                          <span class="selected-check" aria-hidden="true">&#10003;</span>
+                        }
+                      </button>
+                    }
+                  </div>
                 </div>
               }
             </div>
@@ -644,7 +664,7 @@
               >
                 {{ t('analytics.allCategories') }}
               </option>
-              @for (category of categories; track category) {
+              @for (category of allCategories; track category) {
                 <option
                   [value]="category"
                   [selected]="category === vm.analyticsFilters.category"
@@ -1094,7 +1114,7 @@
                   (change)="updateExpenseListCategory($any($event.target).value)"
                 >
                   <option value="All">{{ categoryLabel('All') }}</option>
-                  @for (category of categories; track category) {
+                  @for (category of allCategories; track category) {
                     <option [value]="category">{{ categoryLabel(category) }}</option>
                   }
                 </select>
@@ -1472,6 +1492,57 @@
         </form>
       </section>
 
+      <section class="settings-section custom-categories-settings" aria-labelledby="custom-categories-settings-title">
+        <div>
+          <h3 id="custom-categories-settings-title">{{ t('settings.customCategories') }}</h3>
+          <p>{{ t('settings.categoryName') }}</p>
+        </div>
+
+        <div class="custom-categories-manager">
+          <div class="add-category-form">
+            <div class="field">
+              <input
+                #newCatInput
+                type="text"
+                placeholder="{{ t('settings.categoryName') }}"
+                (keydown.enter)="addCustomCategory(newCatInput); $event.preventDefault()"
+                maxlength="50"
+              >
+            </div>
+            <button
+              class="button button-primary add-category-button"
+              type="button"
+              [disabled]="isSavingCategory()"
+              (click)="addCustomCategory(newCatInput)"
+            >
+              {{ t('settings.addCategory') }}
+            </button>
+          </div>
+
+          @if (categoryError()) {
+            <p class="error-message" role="alert">{{ categoryError() }}</p>
+          }
+
+          @if (customCategories().length) {
+            <div class="custom-categories-list">
+              @for (cat of customCategories(); track cat) {
+                <div class="custom-category-item">
+                  <span class="custom-category-name">{{ cat }}</span>
+                  <button
+                    class="delete-category-button"
+                    type="button"
+                    [attr.aria-label]="'Delete ' + cat"
+                    (click)="deleteCustomCategory(cat)"
+                  >
+                    &times;
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </section>
+
       <section class="danger-zone" aria-labelledby="danger-zone-title">
         <div>
           <h3 id="danger-zone-title">{{ t('settings.dangerZone') }}</h3>
@@ -1690,7 +1761,7 @@
         <div class="field edit-category-field">
           <label for="edit-category">{{ t('expense.category') }}</label>
           <select id="edit-category" formControlName="category">
-            @for (category of categories; track category) {
+            @for (category of allCategories; track category) {
               <option [value]="category">{{ categoryLabel(category) }}</option>
             }
           </select>

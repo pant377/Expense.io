@@ -45,7 +45,21 @@ export class LanguageService {
   }
 
   category(category: ExpenseCategory | 'All'): string {
-    return this.t(`category.${category}` as TranslationKey);
+    const isStandard = category === 'All' || [
+      'Food',
+      'Transport',
+      'Vehicle',
+      'Home',
+      'Health',
+      'Leisure',
+      'Subscriptions',
+      'FinancialExpenses',
+      'Investments',
+      'Gift',
+      'Other',
+    ].includes(category);
+
+    return isStandard ? this.t(`category.${category}` as TranslationKey) : category;
   }
 
   transactionType(type: TransactionType | 'All'): string {
