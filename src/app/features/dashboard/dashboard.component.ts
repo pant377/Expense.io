@@ -177,6 +177,7 @@ export class DashboardComponent {
     transactionType: 'expense',
   });
   readonly breakdownView = signal<'bars' | 'pie'>('bars');
+  readonly selectedBreakdownCategory = signal<ExpenseCategory | null>(null);
   readonly newExpensePhoto = signal<File | null>(null);
   readonly newExpensePhotoPreviewUrl = signal('');
   readonly newExpensePhotoError =
@@ -1103,6 +1104,7 @@ export class DashboardComponent {
     this.cancelDeleteAccount();
     this.cancelEditExpense();
     this.closeRecurringExpenses();
+    this.closeBreakdownTransactions();
   }
 
   private currentMonthTotal(
@@ -1324,5 +1326,36 @@ export class DashboardComponent {
     const now = new Date();
     const timezoneOffset = now.getTimezoneOffset() * 60_000;
     return new Date(now.getTime() - timezoneOffset).toISOString().slice(0, 10);
+  }
+
+  openBreakdownTransactions(category: ExpenseCategory): void {
+    this.selectedBreakdownCategory.set(category);
+  }
+
+  closeBreakdownTransactions(): void {
+    this.selectedBreakdownCategory.set(null);
+  }
+
+  getBreakdownTransactions(
+    expenses: Expense[],
+    category: ExpenseCategory,
+    filters: AnalyticsFilters,
+  ): Expense[] {
+    return expenses
+      .filter((expense) => {
+        if (expense.category !== category) {
+          return false;
+        }
+        if (expense.transactionType !== filters.transactionType) {
+          return false;
+        }
+        const date = expense.occurredAt.toDate();
+        const matchesPeriod =
+          date.getFullYear() === filters.year &&
+          (filters.mode === 'year' || date.getMonth() === filters.month);
+
+        return matchesPeriod;
+      })
+      .sort((a, b) => b.occurredAt.toMillis() - a.occurredAt.toMillis());
   }
 }

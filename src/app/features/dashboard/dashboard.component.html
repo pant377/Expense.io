@@ -943,6 +943,7 @@
                         (mouseleave)="setHoveredPieCategory(null)"
                         (focus)="setHoveredPieCategory(segment)"
                         (blur)="setHoveredPieCategory(null)"
+                        (click)="openBreakdownTransactions(segment.category)"
                       >
                         <path
                           [attr.d]="segment.path"
@@ -988,7 +989,7 @@
                 [class.pie-legend]="breakdownView() === 'pie'"
               >
                 @for (item of vm.analytics.categories; track item.category) {
-                  <div class="breakdown-row">
+                  <div class="breakdown-row clickable-row" (click)="openBreakdownTransactions(item.category)">
                     <div class="breakdown-label">
                       <span
                         class="category-dot"
@@ -1356,6 +1357,88 @@
             </div>
           }
       </section>
+
+      @if (selectedBreakdownCategory(); as activeCategory) {
+        <div class="modal-backdrop" (click)="closeBreakdownTransactions()">
+          <section
+            class="breakdown-transactions-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="breakdown-transactions-title"
+            (click)="$event.stopPropagation()"
+          >
+            <div class="settings-modal-header">
+              <div>
+                <p class="eyebrow">{{ categoryLabel(activeCategory) }}</p>
+                <h2 id="breakdown-transactions-title">
+                  {{ t('analytics.transactions') }}
+                </h2>
+                <p class="modal-description">
+                  {{ vm.analytics.periodLabel }}
+                </p>
+              </div>
+              <button
+                class="modal-close-button"
+                type="button"
+                [attr.aria-label]="t('settings.close')"
+                (click)="closeBreakdownTransactions()"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div class="breakdown-transactions-list">
+              @for (expense of getBreakdownTransactions(vm.expenses, activeCategory, vm.analyticsFilters); track expense.id) {
+                <article class="breakdown-transaction-item" [class.income-transaction]="expense.transactionType === 'income'">
+                  <div class="breakdown-transaction-info">
+                    <strong>{{ expense.description }}</strong>
+                    <div class="breakdown-transaction-metadata">
+                      <small>
+                        {{ paymentMethodLabel(expense.paymentMethod) }} &middot;
+                        {{
+                          timestampToDate(expense.occurredAt)
+                            | date: 'd MMM y' : undefined : language.locale()
+                        }}
+                      </small>
+                      @if (expensePhotoUrl(expense); as photoUrl) {
+                        <a
+                          class="expense-photo-link"
+                          [href]="photoUrl"
+                          target="_blank"
+                          rel="noopener"
+                          [attr.aria-label]="
+                            t('expense.photoViewAria', {
+                              description: expense.description
+                            })
+                          "
+                        >
+                          <img
+                            [src]="photoUrl"
+                            [alt]="expense.photoFileName ?? t('expense.photo')"
+                          >
+                          <span>{{ t('expense.photoView') }}</span>
+                        </a>
+                      }
+                    </div>
+                  </div>
+                  <strong
+                    class="breakdown-transaction-amount"
+                    [class.income-amount]="expense.transactionType === 'income'"
+                  >
+                    {{ expense.transactionType === 'income' ? '+' : '-' }}
+                    {{
+                      expense.amountCents / 100
+                        | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                    }}
+                  </strong>
+                </article>
+              } @empty {
+                <p class="empty-message">{{ t('analytics.noData') }}</p>
+              }
+            </div>
+          </section>
+        </div>
+      }
     }
   } @else {
     <div class="loading-state" aria-live="polite">
@@ -2048,3 +2131,4 @@
     </section>
   </div>
 }
+
