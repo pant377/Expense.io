@@ -82,6 +82,15 @@ Deploy the rules, indexes and application:
 npm run firebase:deploy
 ```
 
+To deploy only Hosting, use the guarded script so the Angular application is rebuilt first:
+
+```bash
+npm run firebase:deploy:hosting
+```
+
+Running `firebase deploy --only hosting` directly uploads the existing `dist/expense-io/browser`
+directory and can publish an old build.
+
 Firebase Web App configuration is public in the compiled browser application by design, but it is
 kept out of source control here. User data is protected by Authentication and the rules in
 `firestore.rules` and `storage.rules`; never replace those rules with unrestricted access.
