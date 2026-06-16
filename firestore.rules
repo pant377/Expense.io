@@ -35,6 +35,7 @@ service cloud.firestore {
           'category',
           'transactionType',
           'paymentMethod',
+          'currency',
           'photoStoragePath',
           'photoFileName',
           'photoContentType',
@@ -48,6 +49,7 @@ service cloud.firestore {
           'category',
           'transactionType',
           'paymentMethod',
+          'currency',
           'occurredAt',
           'createdAt',
           'updatedAt'
@@ -62,6 +64,7 @@ service cloud.firestore {
         && request.resource.data.category.size() > 0
         && request.resource.data.category.size() <= 50
         && request.resource.data.transactionType in ['expense', 'income']
+        && request.resource.data.currency in ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD']
         && (
           request.resource.data.paymentMethod == null
           || request.resource.data.paymentMethod in ['cash', 'card', 'bankTransfer']
@@ -103,6 +106,7 @@ service cloud.firestore {
           'emailAlertsEnabled',
           'alertThresholds',
           'alertState',
+          'baseCurrency',
           'updatedAt'
         ])
         && request.resource.data.keys().hasAll([
@@ -111,6 +115,7 @@ service cloud.firestore {
           'excludeIncome',
           'emailAlertsEnabled',
           'alertThresholds',
+          'baseCurrency',
           'updatedAt'
         ])
         && (
@@ -136,6 +141,7 @@ service cloud.firestore {
           !request.resource.data.keys().hasAny(['alertState'])
           || request.resource.data.alertState is map
         )
+        && request.resource.data.baseCurrency in ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD']
         && request.resource.data.updatedAt is timestamp;
     }
 
@@ -159,6 +165,7 @@ service cloud.firestore {
           'category',
           'transactionType',
           'paymentMethod',
+          'currency',
           'frequency',
           'startDate',
           'nextOccurrenceAt',
@@ -172,6 +179,7 @@ service cloud.firestore {
           'category',
           'transactionType',
           'paymentMethod',
+          'currency',
           'frequency',
           'startDate',
           'nextOccurrenceAt',
@@ -189,6 +197,7 @@ service cloud.firestore {
         && request.resource.data.category.size() > 0
         && request.resource.data.category.size() <= 50
         && request.resource.data.transactionType in ['expense', 'income']
+        && request.resource.data.currency in ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD']
         && (
           request.resource.data.paymentMethod == null
           || request.resource.data.paymentMethod in ['cash', 'card', 'bankTransfer']
@@ -234,6 +243,10 @@ service cloud.firestore {
         allow read: if signedInAs(userId);
         allow create, update: if signedInAs(userId) && validCustomCategories();
         allow delete: if signedInAs(userId);
+      }
+
+      match /settings/exchange-rates {
+        allow read, write: if signedInAs(userId);
       }
     }
 

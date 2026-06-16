@@ -20,6 +20,7 @@ function expense(
     category,
     transactionType: 'expense',
     paymentMethod: 'card',
+    currency: 'EUR',
     description: id,
     occurredAt: timestamp,
     createdAt: timestamp,
@@ -167,6 +168,8 @@ describe('expense analytics', () => {
         category: 'All',
         transactionType: 'expense',
       },
+      'EUR',
+      { EUR: 1.0 },
       'el-GR',
     );
 
@@ -184,6 +187,8 @@ describe('expense analytics', () => {
         category: 'All',
         transactionType: 'income',
       },
+      'EUR',
+      { EUR: 1.0 },
       'el-GR',
     );
 

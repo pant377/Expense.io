@@ -1815,3 +1815,46 @@ h2 {
   background: #193a3a;
 }
 
+.amount-with-currency {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.amount-with-currency .amount-input {
+  flex: 1;
+}
+
+.amount-with-currency .currency-select {
+  width: 85px;
+  min-height: 48px;
+  padding: 0 0.5rem;
+  border: 1px solid #ccd8de;
+  border-radius: 11px;
+  background: white;
+  color: var(--ink);
+  font-weight: 500;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+:host-context([data-theme="dark"]) .amount-with-currency .currency-select {
+  background-color: #1b2d34;
+  border-color: #3b5059;
+  color: var(--ink);
+}
+
+.amount-with-currency .currency-select:focus-visible {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(10, 124, 116, 0.12);
+  outline: none;
+}
+
+.field-description {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+

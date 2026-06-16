@@ -20,6 +20,7 @@ function expense(
     category: 'Food',
     transactionType,
     paymentMethod: 'card',
+    currency: 'EUR',
     description: id,
     occurredAt: timestamp,
     createdAt: timestamp,
@@ -34,6 +35,7 @@ describe('spending limits', () => {
     excludeIncome: true,
     emailAlertsEnabled: false,
     alertThresholds: [],
+    baseCurrency: 'EUR',
   };
 
   it('calculates daily and monthly usage for the current periods', () => {
@@ -44,6 +46,7 @@ describe('spending limits', () => {
         expense('previous-month', 9000, '2026-05-31'),
       ],
       limits,
+      undefined,
       new Date('2026-06-13T18:00:00'),
     );
 
@@ -64,7 +67,9 @@ describe('spending limits', () => {
         excludeIncome: true,
         emailAlertsEnabled: false,
         alertThresholds: [],
+        baseCurrency: 'EUR',
       },
+      undefined,
       new Date('2026-06-13T18:00:00'),
     );
 
@@ -76,6 +81,7 @@ describe('spending limits', () => {
     const summary = buildSpendingLimitSummary(
       [expense('today', 2000, '2026-06-13')],
       limits,
+      undefined,
       new Date('2026-06-13T18:00:00'),
     );
 
@@ -88,6 +94,7 @@ describe('spending limits', () => {
     const summary = buildSpendingLimitSummary(
       [expense('today', 2001, '2026-06-13')],
       limits,
+      undefined,
       new Date('2026-06-13T18:00:00'),
     );
 
@@ -101,6 +108,7 @@ describe('spending limits', () => {
         expense('income', 100000, '2026-06-13', 'income'),
       ],
       limits,
+      undefined,
       new Date('2026-06-13T18:00:00'),
     );
 
@@ -115,6 +123,7 @@ describe('spending limits', () => {
         expense('income', 1250, '2026-06-13', 'income'),
       ],
       { ...limits, excludeIncome: false },
+      undefined,
       new Date('2026-06-13T18:00:00'),
     );
 
@@ -129,6 +138,7 @@ describe('spending limits', () => {
         expense('income', 5000, '2026-06-13', 'income'),
       ],
       { ...limits, excludeIncome: false },
+      undefined,
       new Date('2026-06-13T18:00:00'),
     );
 

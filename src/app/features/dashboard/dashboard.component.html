@@ -55,7 +55,7 @@
             <strong>
               {{
                 vm.monthExpenseCents / 100
-                  | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                  | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
               }}
             </strong>
             <small>{{ t('dashboard.liveTotal') }}</small>
@@ -65,7 +65,7 @@
             <strong>
               {{
                 vm.monthIncomeCents / 100
-                  | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                  | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
               }}
             </strong>
             <small>{{ t('dashboard.liveTotal') }}</small>
@@ -78,7 +78,7 @@
             >
               {{
                 vm.monthBalanceCents / 100
-                  | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                  | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
               }}
             </strong>
             <small>{{ t('dashboard.liveTotal') }}</small>
@@ -91,7 +91,7 @@
             >
               {{
                 vm.balanceCents / 100
-                  | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                  | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
               }}
             </strong>
             <small>
@@ -182,26 +182,33 @@
                 "
               >
                 <label for="amount">{{ t('expense.amount') }}</label>
-                <div class="amount-input">
-                  <span aria-hidden="true">&euro;</span>
-                  <input
-                    id="amount"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    formControlName="amount"
-                    placeholder="0.00"
-                    [attr.aria-invalid]="
-                      expenseForm.controls.amount.invalid &&
-                      expenseForm.controls.amount.touched
-                    "
-                    [attr.aria-describedby]="
-                      expenseForm.controls.amount.invalid &&
-                      expenseForm.controls.amount.touched
-                        ? 'amount-error'
-                        : null
-                    "
-                  >
+                <div class="amount-with-currency">
+                  <div class="amount-input">
+                    <span aria-hidden="true">{{ currencySymbol(expenseForm.controls.currency.value) }}</span>
+                    <input
+                      id="amount"
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      formControlName="amount"
+                      placeholder="0.00"
+                      [attr.aria-invalid]="
+                        expenseForm.controls.amount.invalid &&
+                        expenseForm.controls.amount.touched
+                      "
+                      [attr.aria-describedby]="
+                        expenseForm.controls.amount.invalid &&
+                        expenseForm.controls.amount.touched
+                          ? 'amount-error'
+                          : null
+                      "
+                    >
+                  </div>
+                  <select class="currency-select" formControlName="currency" aria-label="Currency">
+                    @for (curr of currencies; track curr) {
+                      <option [value]="curr">{{ curr }}</option>
+                    }
+                  </select>
                 </div>
                 @if (
                   expenseForm.controls.amount.invalid &&
@@ -437,14 +444,14 @@
                 <strong>
                   {{
                     daily.spentCents / 100
-                      | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                      | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
                   }}
                 </strong>
                 <span>
                   /
                   {{
                     daily.limitCents / 100
-                      | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                      | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
                   }}
                 </span>
               </p>
@@ -459,7 +466,7 @@
                   <strong>
                     {{
                       daily.exceededByCents / 100
-                        | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                        | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
                     }}
                   </strong>
                   <span>({{ daily.exceededPercent }}%)</span>
@@ -470,7 +477,7 @@
                   <strong>
                     {{
                       daily.remainingCents / 100
-                        | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                        | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
                     }}
                   </strong>
                 </p>
@@ -499,14 +506,14 @@
                 <strong>
                   {{
                     monthly.spentCents / 100
-                      | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                      | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
                   }}
                 </strong>
                 <span>
                   /
                   {{
                     monthly.limitCents / 100
-                      | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                      | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
                   }}
                 </span>
               </p>
@@ -521,7 +528,7 @@
                   <strong>
                     {{
                       monthly.exceededByCents / 100
-                        | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                        | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
                     }}
                   </strong>
                   <span>({{ monthly.exceededPercent }}%)</span>
@@ -532,7 +539,7 @@
                   <strong>
                     {{
                       monthly.remainingCents / 100
-                        | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                        | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
                     }}
                   </strong>
                 </p>
@@ -686,7 +693,7 @@
               >
                 {{
                   vm.analytics.totalCents / 100
-                    | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                    | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
                 }}
               </strong>
               <small>{{ t('analytics.incomeMinusExpenses') }}</small>
@@ -696,7 +703,7 @@
               <strong class="positive-money">
                 {{
                   vm.analytics.incomeCents / 100
-                    | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                    | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
                 }}
               </strong>
               <small>{{ t('analytics.selectedPeriod') }}</small>
@@ -706,7 +713,7 @@
               <strong class="negative-money">
                 {{
                   vm.analytics.expenseCents / 100
-                    | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                    | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
                 }}
               </strong>
               <small>{{ t('analytics.selectedPeriod') }}</small>
@@ -728,7 +735,7 @@
               <strong>
                 {{
                   vm.analytics.totalCents / 100
-                    | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                    | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
                 }}
               </strong>
               @if (vm.analytics.changePercent === null) {
@@ -772,7 +779,7 @@
               <strong>
                 {{
                   vm.analytics.averageCents / 100
-                    | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                    | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
                 }}
               </strong>
               <small>{{ t('analytics.perTransaction') }}</small>
@@ -827,13 +834,13 @@
                     class="chart-column"
                     [attr.data-tooltip]="
                       (point.amountCents / 100
-                        | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale())
+                        | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale())
                     "
                     [attr.aria-label]="
                       point.label +
                       ': ' +
                       (point.amountCents / 100
-                        | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale())
+                        | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale())
                     "
                   >
                     <div
@@ -966,7 +973,7 @@
                       <text class="pie-center-value" x="100" y="108">
                         {{
                           hovered.amountCents / 100
-                            | currency: 'EUR' : 'symbol' : '1.0-0' : language.locale()
+                            | currency: vm.limits.baseCurrency : 'symbol' : '1.0-0' : language.locale()
                         }}
                       </text>
                       <text class="pie-center-percent" x="100" y="124">
@@ -1011,7 +1018,7 @@
                       <span>
                         {{
                           item.amountCents / 100
-                            | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                            | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
                         }}
                       </span>
                     </div>
@@ -1245,7 +1252,7 @@
                     {{ expense.transactionType === 'income' ? '+' : '-' }}
                     {{
                       expense.amountCents / 100
-                        | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                        | currency: expense.currency : 'symbol' : '1.2-2' : language.locale()
                     }}
                   </strong>
                   <div class="expense-item-actions">
@@ -1351,7 +1358,7 @@
             </div>
           } @else if (!loadError()) {
             <div class="empty-state">
-              <span aria-hidden="true">&euro;</span>
+              <span aria-hidden="true">{{ currencySymbol(vm.limits.baseCurrency) }}</span>
               <h3>{{ t('expense.emptyTitle') }}</h3>
               <p>{{ t('expense.emptyDescription') }}</p>
             </div>
@@ -1428,7 +1435,7 @@
                     {{ expense.transactionType === 'income' ? '+' : '-' }}
                     {{
                       expense.amountCents / 100
-                        | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                        | currency: expense.currency : 'symbol' : '1.2-2' : language.locale()
                     }}
                   </strong>
                 </article>
@@ -1515,7 +1522,7 @@
           <div class="field">
             <label for="daily-limit-settings">{{ t('limits.dailyLimit') }}</label>
             <div class="amount-input">
-              <span aria-hidden="true">&euro;</span>
+              <span aria-hidden="true">{{ currencySymbol(spendingLimitForm.controls.baseCurrency.value) }}</span>
               <input
                 id="daily-limit-settings"
                 type="number"
@@ -1530,7 +1537,7 @@
           <div class="field">
             <label for="monthly-limit-settings">{{ t('limits.monthlyLimit') }}</label>
             <div class="amount-input">
-              <span aria-hidden="true">&euro;</span>
+              <span aria-hidden="true">{{ currencySymbol(spendingLimitForm.controls.baseCurrency.value) }}</span>
               <input
                 id="monthly-limit-settings"
                 type="number"
@@ -1540,6 +1547,16 @@
                 placeholder="0.00"
               >
             </div>
+          </div>
+
+          <div class="field">
+            <label for="base-currency-settings">{{ t('limits.baseCurrency') }}</label>
+            <select id="base-currency-settings" formControlName="baseCurrency">
+              @for (curr of currencies; track curr) {
+                <option [value]="curr">{{ curr }}</option>
+              }
+            </select>
+            <small class="field-description">{{ t('limits.baseCurrencyDescription') }}</small>
           </div>
 
           <label class="limit-income-toggle">
@@ -1851,15 +1868,22 @@
           "
         >
           <label for="edit-amount">{{ t('expense.amount') }}</label>
-          <div class="amount-input">
-            <span aria-hidden="true">&euro;</span>
-            <input
-              id="edit-amount"
-              type="number"
-              min="0.01"
-              step="0.01"
-              formControlName="amount"
-            >
+          <div class="amount-with-currency">
+            <div class="amount-input">
+              <span aria-hidden="true">{{ currencySymbol(editExpenseForm.controls.currency.value) }}</span>
+              <input
+                id="edit-amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                formControlName="amount"
+              >
+            </div>
+            <select class="currency-select" formControlName="currency" aria-label="Currency">
+              @for (curr of currencies; track curr) {
+                <option [value]="curr">{{ curr }}</option>
+              }
+            </select>
           </div>
           @if (
             editExpenseForm.controls.amount.invalid &&
@@ -2050,7 +2074,7 @@
                 {{ schedule.transactionType === 'income' ? '+' : '-' }}
                 {{
                   schedule.amountCents / 100
-                    | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+                    | currency: schedule.currency : 'symbol' : '1.2-2' : language.locale()
                 }}
               </strong>
               <div class="recurring-actions">
@@ -2134,7 +2158,7 @@
           {{ expense.transactionType === 'income' ? '+' : '-' }}
           {{
             expense.amountCents / 100
-              | currency: 'EUR' : 'symbol' : '1.2-2' : language.locale()
+              | currency: expense.currency : 'symbol' : '1.2-2' : language.locale()
           }}
         </strong>
       </div>

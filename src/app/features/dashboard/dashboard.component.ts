@@ -77,8 +77,10 @@ import {
   EMPTY_SPENDING_LIMITS,
   SpendingLimits,
   buildSpendingLimitSummary,
+  convertCurrency,
 } from '../../core/limits/spending-limit.model';
 import { SpendingLimitService } from '../../core/limits/spending-limit.service';
+import { CurrencyService } from '../../core/currency/currency.service';
 import { paginateItems } from '../../core/pagination/pagination';
 import { ThemeService } from '../../core/theme/theme.service';
 
@@ -123,6 +125,7 @@ export class DashboardComponent {
   private readonly recurringExpenseService = inject(RecurringExpenseService);
   private readonly spendingLimitService = inject(SpendingLimitService);
   private readonly customCategoryService = inject(CustomCategoryService);
+  private readonly currencyService = inject(CurrencyService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   readonly language = inject(LanguageService);
@@ -135,6 +138,7 @@ export class DashboardComponent {
 
   readonly categories = EXPENSE_CATEGORIES;
   readonly transactionTypes = TRANSACTION_TYPES;
+  readonly currencies = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD'];
   readonly analyticsTransactionTypes = [
     'expense',
     'income',
@@ -207,6 +211,7 @@ export class DashboardComponent {
     occurredAt: [this.today(), Validators.required],
     recurring: [false],
     frequency: ['monthly' as RecurringFrequency, Validators.required],
+    currency: ['EUR', Validators.required],
   });
 
   readonly editExpenseForm = this.formBuilder.group({
@@ -223,6 +228,7 @@ export class DashboardComponent {
     transactionType: ['expense' as TransactionType, Validators.required],
     paymentMethod: ['' as PaymentMethod | '', Validators.required],
     occurredAt: ['', Validators.required],
+    currency: ['EUR', Validators.required],
   });
 
   readonly spendingLimitForm = this.formBuilder.group({
@@ -239,6 +245,7 @@ export class DashboardComponent {
     alertThreshold50: [false],
     alertThreshold80: [false],
     alertThreshold99: [false],
+    baseCurrency: ['EUR', Validators.required],
   });
 
   readonly deleteAccountForm = this.formBuilder.group({
@@ -260,12 +267,22 @@ export class DashboardComponent {
       }
 
       const limits$ = this.spendingLimitService.watchLimits(user.uid).pipe(
-        tap((limits) => this.syncSpendingLimitForm(limits)),
+        tap((limits) => {
+          this.syncSpendingLimitForm(limits);
+          if (!this.expenseForm.controls.currency.dirty) {
+            this.expenseForm.controls.currency.setValue(limits.baseCurrency || 'EUR');
+          }
+        }),
         catchError((error: unknown) => {
           this.limitError.set(firebaseErrorMessage(error, this.language.current()));
           return of({ ...EMPTY_SPENDING_LIMITS });
         }),
       );
+
+      const rates$ = this.currencyService.watchAndSyncRates(user.uid).pipe(
+        catchError(() => of({ EUR: 1.0, USD: 1.08, GBP: 0.85, CHF: 0.96, JPY: 168.0, CAD: 1.48, AUD: 1.62 })),
+      );
+
       const recurringSchedules$ = this.recurringExpenseService
         .watchSchedules(user.uid)
         .pipe(
@@ -293,19 +310,44 @@ export class DashboardComponent {
           tap((expenses) => this.syncExpensePhotoUrls(expenses)),
         ),
         limits$,
+        rates$,
         recurringSchedules$,
         customCategories$,
       ]).pipe(
-        map(([expenses, limits, recurringSchedules, customCategories]) => {
-          const totalExpenseCents = this.totalForType(expenses, 'expense');
-          const totalIncomeCents = this.totalForType(expenses, 'income');
-          const monthExpenseCents = this.currentMonthTotal(expenses, 'expense');
-          const monthIncomeCents = this.currentMonthTotal(expenses, 'income');
+        map(([expenses, limits, rates, recurringSchedules, customCategories]) => {
+          const baseCurrency = limits.baseCurrency || 'EUR';
+
+          const totalExpenseCents = expenses.reduce((sum, exp) => 
+            exp.transactionType === 'expense'
+              ? sum + convertCurrency(exp.amountCents, exp.currency, baseCurrency, rates)
+              : sum, 0);
+
+          const totalIncomeCents = expenses.reduce((sum, exp) => 
+            exp.transactionType === 'income'
+              ? sum + convertCurrency(exp.amountCents, exp.currency, baseCurrency, rates)
+              : sum, 0);
+
+          const now = new Date();
+          const currentMonthExpenses = expenses.filter(exp => {
+            const expDate = exp.occurredAt.toDate();
+            return expDate.getFullYear() === now.getFullYear() && expDate.getMonth() === now.getMonth();
+          });
+
+          const monthExpenseCents = currentMonthExpenses.reduce((sum, exp) => 
+            exp.transactionType === 'expense'
+              ? sum + convertCurrency(exp.amountCents, exp.currency, baseCurrency, rates)
+              : sum, 0);
+
+          const monthIncomeCents = currentMonthExpenses.reduce((sum, exp) => 
+            exp.transactionType === 'income'
+              ? sum + convertCurrency(exp.amountCents, exp.currency, baseCurrency, rates)
+              : sum, 0);
 
           return {
             user,
             expenses,
             limits,
+            rates,
             recurringSchedules,
             customCategories,
             totalExpenseCents,
@@ -322,6 +364,7 @@ export class DashboardComponent {
             user,
             expenses: [] as Expense[],
             limits: { ...EMPTY_SPENDING_LIMITS },
+            rates: { EUR: 1.0, USD: 1.08, GBP: 0.85, CHF: 0.96, JPY: 168.0, CAD: 1.48, AUD: 1.62 } as Record<string, number>,
             recurringSchedules: [] as RecurringExpenseSchedule[],
             customCategories: [] as string[],
             totalExpenseCents: 0,
@@ -359,10 +402,13 @@ export class DashboardComponent {
         limitSummary: buildSpendingLimitSummary(
           viewModel.expenses,
           viewModel.limits,
+          viewModel.rates,
         ),
         analytics: buildExpenseAnalytics(
           viewModel.expenses,
           filters,
+          viewModel.limits.baseCurrency || 'EUR',
+          viewModel.rates,
           this.language.localeFor(language),
         ),
         analyticsFilters: filters,
@@ -401,6 +447,7 @@ export class DashboardComponent {
       occurredAt,
       recurring,
       frequency,
+      currency,
     } = this.expenseForm.getRawValue();
 
     if (!user || amount === null || !paymentMethod) {
@@ -417,6 +464,7 @@ export class DashboardComponent {
         category,
         transactionType,
         paymentMethod,
+        currency,
         occurredAt: this.expenseService.dateToTimestamp(occurredAt),
       };
 
@@ -428,6 +476,7 @@ export class DashboardComponent {
           transactionType: draft.transactionType,
           paymentMethod: draft.paymentMethod,
           frequency,
+          currency,
           startDate: draft.occurredAt,
         });
       } else {
@@ -448,6 +497,7 @@ export class DashboardComponent {
         occurredAt: this.today(),
         recurring: false,
         frequency: 'monthly',
+        currency: this.spendingLimitForm.get('baseCurrency')?.value || 'EUR',
       });
     } catch (error: unknown) {
       this.actionError.set(firebaseErrorMessage(error, this.language.current()));
@@ -476,6 +526,7 @@ export class DashboardComponent {
       alertThreshold50,
       alertThreshold80,
       alertThreshold99,
+      baseCurrency,
     } = this.spendingLimitForm.getRawValue();
 
     const alertThresholds: number[] = [];
@@ -496,6 +547,7 @@ export class DashboardComponent {
         excludeIncome: excludeIncome ?? true,
         emailAlertsEnabled: emailAlertsEnabled ?? false,
         alertThresholds,
+        baseCurrency: baseCurrency || 'EUR',
       });
       this.spendingLimitForm.markAsPristine();
       this.limitSuccess.set(this.t('limits.saved'));
@@ -870,6 +922,7 @@ export class DashboardComponent {
       transactionType: expense.transactionType,
       paymentMethod: expense.paymentMethod ?? '',
       occurredAt: this.dateInputValue(expense.occurredAt.toDate()),
+      currency: expense.currency || 'EUR',
     });
   }
 
@@ -897,6 +950,7 @@ export class DashboardComponent {
       transactionType,
       paymentMethod,
       occurredAt,
+      currency,
     } =
       this.editExpenseForm.getRawValue();
 
@@ -924,6 +978,7 @@ export class DashboardComponent {
           category,
           transactionType,
           paymentMethod,
+          currency: currency || 'EUR',
           occurredAt: this.expenseService.dateToTimestamp(occurredAt),
         },
         photoUpdate,
@@ -1093,6 +1148,27 @@ export class DashboardComponent {
     return this.language.t(key, parameters);
   }
 
+  currencySymbol(code: string): string {
+    switch (code) {
+      case 'EUR':
+        return '€';
+      case 'USD':
+        return '$';
+      case 'GBP':
+        return '£';
+      case 'CHF':
+        return 'CHF';
+      case 'JPY':
+        return '¥';
+      case 'CAD':
+        return 'C$';
+      case 'AUD':
+        return 'A$';
+      default:
+        return code || '€';
+    }
+  }
+
   categoryLabel(category: ExpenseCategory | 'All'): string {
     return this.language.category(category);
   }
@@ -1175,6 +1251,7 @@ export class DashboardComponent {
         alertThreshold50: (limits.alertThresholds || []).includes(50),
         alertThreshold80: (limits.alertThresholds || []).includes(80),
         alertThreshold99: (limits.alertThresholds || []).includes(99),
+        baseCurrency: limits.baseCurrency || 'EUR',
       },
       { emitEvent: false },
     );

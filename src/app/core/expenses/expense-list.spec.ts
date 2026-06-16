@@ -21,6 +21,7 @@ function expense(
     amountCents: 1000,
     transactionType: id === 'new-backdated' ? 'income' : 'expense',
     paymentMethod: id === 'middle-entry' ? 'cash' : 'card',
+    currency: 'EUR',
     occurredAt: Timestamp.fromDate(new Date(`${occurredAt}T12:00:00`)),
     createdAt: Timestamp.fromDate(new Date(createdAt)),
     updatedAt: Timestamp.fromDate(new Date(createdAt)),

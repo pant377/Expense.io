@@ -6,6 +6,7 @@ export interface SpendingLimits {
   excludeIncome: boolean;
   emailAlertsEnabled: boolean;
   alertThresholds: number[];
+  baseCurrency: string;
 }
 
 export interface SpendingLimitStatus {
@@ -29,11 +30,31 @@ export const EMPTY_SPENDING_LIMITS: SpendingLimits = {
   excludeIncome: true,
   emailAlertsEnabled: false,
   alertThresholds: [],
+  baseCurrency: 'EUR',
 };
+
+export function convertCurrency(
+  amountCents: number,
+  fromCurrency: string,
+  toCurrency: string,
+  rates: Record<string, number>,
+): number {
+  const from = fromCurrency || 'EUR';
+  const to = toCurrency || 'EUR';
+  if (from === to) {
+    return amountCents;
+  }
+  const rateFrom = rates[from] || 1;
+  const rateTo = rates[to] || 1;
+  // Convert fromCurrency to EUR, then EUR to toCurrency
+  const amountInEur = amountCents / rateFrom;
+  return Math.round(amountInEur * rateTo);
+}
 
 export function buildSpendingLimitSummary(
   expenses: Expense[],
   limits: SpendingLimits,
+  rates: Record<string, number> = { EUR: 1.0 },
   now = new Date(),
 ): SpendingLimitSummary {
   let dailySpentCents = 0;
@@ -49,12 +70,20 @@ export function buildSpendingLimitSummary(
       return;
     }
 
+    const txCurrency = transaction.currency || 'EUR';
+    const amountInBase = convertCurrency(
+      transaction.amountCents,
+      txCurrency,
+      limits.baseCurrency || 'EUR',
+      rates,
+    );
+
     const signedAmount =
       transaction.transactionType === 'expense'
-        ? transaction.amountCents
+        ? amountInBase
         : limits.excludeIncome
           ? 0
-          : -transaction.amountCents;
+          : -amountInBase;
 
     monthlySpentCents += signedAmount;
 

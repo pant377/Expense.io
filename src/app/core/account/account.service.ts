@@ -44,6 +44,9 @@ export class AccountService {
     finalBatch.delete(
       doc(firestore, `users/${userId}/settings/custom-categories`),
     );
+    finalBatch.delete(
+      doc(firestore, `users/${userId}/settings/exchange-rates`),
+    );
     finalBatch.delete(doc(firestore, `users/${userId}`));
     await finalBatch.commit();
   }

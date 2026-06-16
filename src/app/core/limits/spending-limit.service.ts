@@ -55,6 +55,10 @@ export class SpendingLimitService {
                 Array.isArray(data['alertThresholds'])
                   ? data['alertThresholds']
                   : [],
+              baseCurrency:
+                typeof data['baseCurrency'] === 'string'
+                  ? data['baseCurrency']
+                  : 'EUR',
             });
           }),
         (error) => this.zone.run(() => subscriber.error(error)),

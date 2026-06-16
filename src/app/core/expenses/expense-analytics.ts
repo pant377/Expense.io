@@ -4,6 +4,7 @@ import {
   TransactionType,
 } from './expense.model';
 import { formatMonthName } from '../i18n/date-labels';
+import { convertCurrency } from '../limits/spending-limit.model';
 
 export type AnalyticsMode = 'month' | 'year';
 export type AnalyticsCategory = ExpenseCategory | 'All';
@@ -68,10 +69,22 @@ export function availableTransactionYears(
 export function buildExpenseAnalytics(
   expenses: Expense[],
   filters: AnalyticsFilters,
+  baseCurrency = 'EUR',
+  rates: Record<string, number> = { EUR: 1.0 },
   locale = 'en-GB',
 ): ExpenseAnalytics {
-  const periodExpenses = filterForPeriod(expenses, filters);
-  const previousExpenses = filterForPeriod(expenses, previousPeriod(filters));
+  const convertedExpenses = expenses.map((expense) => ({
+    ...expense,
+    amountCents: convertCurrency(
+      expense.amountCents,
+      expense.currency || 'EUR',
+      baseCurrency,
+      rates,
+    ),
+  }));
+
+  const periodExpenses = filterForPeriod(convertedExpenses, filters);
+  const previousExpenses = filterForPeriod(convertedExpenses, previousPeriod(filters));
   const incomeCents = sumByType(periodExpenses, 'income');
   const expenseCents = sumByType(periodExpenses, 'expense');
   const previousIncomeCents = sumByType(previousExpenses, 'income');

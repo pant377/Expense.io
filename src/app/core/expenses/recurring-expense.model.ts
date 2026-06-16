@@ -18,6 +18,7 @@ export interface RecurringExpenseSchedule {
   transactionType: TransactionType;
   paymentMethod: PaymentMethod | null;
   frequency: RecurringFrequency;
+  currency: string;
   startDate: Timestamp;
   nextOccurrenceAt: Timestamp;
   active: boolean;
@@ -32,6 +33,7 @@ export interface RecurringExpenseDraft {
   transactionType: TransactionType;
   paymentMethod: PaymentMethod;
   frequency: RecurringFrequency;
+  currency: string;
   startDate: Timestamp;
 }
 
@@ -44,7 +46,7 @@ export function normalizeRecurringExpenseSchedule(
   return {
     ...(data as unknown as Omit<
       RecurringExpenseSchedule,
-      'id' | 'transactionType' | 'paymentMethod'
+      'id' | 'transactionType' | 'paymentMethod' | 'currency'
     >),
     id,
     transactionType: data['transactionType'] === 'income' ? 'income' : 'expense',
@@ -54,6 +56,7 @@ export function normalizeRecurringExpenseSchedule(
       paymentMethod === 'bankTransfer'
         ? paymentMethod
         : null,
+    currency: typeof data['currency'] === 'string' ? data['currency'] : 'EUR',
   };
 }
 

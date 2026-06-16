@@ -14,6 +14,7 @@ interface SpendingLimits {
   excludeIncome: boolean;
   emailAlertsEnabled: boolean;
   alertThresholds: number[];
+  baseCurrency?: string;
   alertState?: {
     daily?: Record<string, number[]>;
     monthly?: Record<string, number[]>;
@@ -74,6 +75,44 @@ function getSmtpConfig(isEmulator: boolean): SmtpConfig | null {
   };
 }
 
+function convertCurrency(
+  amountCents: number,
+  fromCurrency: string,
+  toCurrency: string,
+  rates: Record<string, number>
+): number {
+  const from = fromCurrency || 'EUR';
+  const to = toCurrency || 'EUR';
+  if (from === to) {
+    return amountCents;
+  }
+  const rateFrom = rates[from] || 1;
+  const rateTo = rates[to] || 1;
+  const amountInEur = amountCents / rateFrom;
+  return Math.round(amountInEur * rateTo);
+}
+
+function currencySymbol(code: string): string {
+  switch (code) {
+    case 'EUR':
+      return '€';
+    case 'USD':
+      return '$';
+    case 'GBP':
+      return '£';
+    case 'CHF':
+      return 'CHF';
+    case 'JPY':
+      return '¥';
+    case 'CAD':
+      return 'C$';
+    case 'AUD':
+      return 'A$';
+    default:
+      return code || '€';
+  }
+}
+
 /**
  * Triggered on creation of an expense.
  * Calculates spending levels and triggers email alerts if user-defined thresholds are crossed.
@@ -118,7 +157,31 @@ export const checkSpendingLimits = onDocumentCreated(
       return;
     }
 
-    // 2. Fetch User Profile for Email Details
+    const baseCurrency = limits.baseCurrency || 'EUR';
+
+    // 2. Fetch cached exchange rates
+    const ratesDoc = await db
+      .doc(`users/${userId}/settings/exchange-rates`)
+      .get();
+
+    const defaultRates: Record<string, number> = {
+      EUR: 1.0,
+      USD: 1.08,
+      GBP: 0.85,
+      CHF: 0.96,
+      JPY: 168.0,
+      CAD: 1.48,
+      AUD: 1.62,
+    };
+    let rates = defaultRates;
+    if (ratesDoc.exists) {
+      const ratesData = ratesDoc.data();
+      if (ratesData && ratesData.rates) {
+        rates = ratesData.rates;
+      }
+    }
+
+    // 3. Fetch User Profile for Email Details
     let userEmail: string | undefined;
     let displayName = 'User';
 
@@ -141,7 +204,7 @@ export const checkSpendingLimits = onDocumentCreated(
       return;
     }
 
-    // 3. Query all expenses for the current month to calculate daily and monthly totals
+    // 4. Query all expenses for the current month to calculate daily and monthly totals
     const occurredAt = expenseData.occurredAt ? expenseData.occurredAt.toDate() : new Date();
     const startOfMonth = new Date(occurredAt.getFullYear(), occurredAt.getMonth(), 1);
     const endOfMonth = new Date(occurredAt.getFullYear(), occurredAt.getMonth() + 1, 0, 23, 59, 59, 999);
@@ -162,13 +225,17 @@ export const checkSpendingLimits = onDocumentCreated(
     expensesSnapshot.forEach((docSnap) => {
       const exp = docSnap.data();
       const expDate = exp.occurredAt ? exp.occurredAt.toDate() : new Date();
+      const expCurrency = exp.currency || 'EUR';
+
+      // Convert transaction amount to user's baseCurrency
+      const amountInBase = convertCurrency(exp.amountCents, expCurrency, baseCurrency, rates);
 
       const signedAmount =
         exp.transactionType === 'expense'
-          ? exp.amountCents
+          ? amountInBase
           : limits.excludeIncome
             ? 0
-            : -exp.amountCents;
+            : -amountInBase;
 
       monthlySpentCents += signedAmount;
 
@@ -181,7 +248,7 @@ export const checkSpendingLimits = onDocumentCreated(
     monthlySpentCents = Math.max(monthlySpentCents, 0);
     dailySpentCents = Math.max(dailySpentCents, 0);
 
-    // 4. Track alert states to avoid spamming the user
+    // 5. Track alert states to avoid spamming the user
     const alertState = limits.alertState || {};
     const dailyState = alertState.daily || {};
     const monthlyState = alertState.monthly || {};
@@ -225,7 +292,7 @@ export const checkSpendingLimits = onDocumentCreated(
     const updatedDailyState = { ...dailyState, [dayKey]: [...sentDailyAlerts, ...newDailyAlerts] };
     const updatedMonthlyState = { ...monthlyState, [monthKey]: [...sentMonthlyAlerts, ...newMonthlyAlerts] };
 
-    // 5. Build and send the alert email
+    // 6. Build and send the alert email
     const dailyStatus = dailyLimit
       ? {
           spent: dailySpentCents / 100,
@@ -248,7 +315,15 @@ export const checkSpendingLimits = onDocumentCreated(
       ? 'http://localhost:4200'
       : `https://${process.env.GCLOUD_PROJECT || 'expense-io'}.web.app`;
 
-    const htmlContent = buildEmailTemplate(displayName, newDailyAlerts, newMonthlyAlerts, dailyStatus, monthlyStatus, platformUrl);
+    const htmlContent = buildEmailTemplate(
+      displayName,
+      newDailyAlerts,
+      newMonthlyAlerts,
+      dailyStatus,
+      monthlyStatus,
+      platformUrl,
+      baseCurrency
+    );
 
     // local testing dev experience: write email to root folder
     if (isEmulator) {
@@ -299,7 +374,7 @@ export const checkSpendingLimits = onDocumentCreated(
       }
     }
 
-    // 6. Record sent alerts only after delivery or emulator simulation succeeds.
+    // 7. Record sent alerts only after delivery or emulator simulation succeeds.
     await db.doc(`users/${userId}/settings/spending-limits`).set(
       {
         alertState: {
@@ -336,7 +411,8 @@ function buildEmailTemplate(
   newMonthlyAlerts: number[],
   dailyStatus: { spent: number; limit: number; percent: number } | null,
   monthlyStatus: { spent: number; limit: number; percent: number } | null,
-  platformUrl: string
+  platformUrl: string,
+  baseCurrency: string
 ): string {
   // Styles & colors matching the app
   const brandColor = '#0a7c74';
@@ -345,6 +421,7 @@ function buildEmailTemplate(
   const warningColor = '#f59e0b';
   const textColor = '#2c3e50';
   const bgColor = '#f7f9f9';
+  const symbol = currencySymbol(baseCurrency);
 
   function renderProgressBar(percent: number): string {
     const fillColor = percent >= 99 ? dangerColor : percent >= 80 ? warningColor : brandColorTeal;
@@ -367,11 +444,11 @@ function buildEmailTemplate(
           <span style="background-color: ${badgeColor}22; color: ${badgeColor}; padding: 4px 10px; border-radius: 99px; font-weight: 800; font-size: 12px;">${highestDaily}% Reached</span>
         </div>
         <p style="margin: 0; font-size: 15px; color: ${textColor};">
-          You have spent <strong>€${dailyStatus.spent.toFixed(2)}</strong> out of your daily limit of <strong>€${dailyStatus.limit.toFixed(2)}</strong>.
+          You have spent <strong>${symbol}${dailyStatus.spent.toFixed(2)}</strong> out of your daily limit of <strong>${symbol}${dailyStatus.limit.toFixed(2)}</strong>.
         </p>
         ${renderProgressBar(dailyStatus.percent)}
         <div style="text-align: right; font-size: 13px; font-weight: 700; color: ${textColor};">
-          Used: ${dailyStatus.percent}% &middot; Remaining: €${Math.max(dailyStatus.limit - dailyStatus.spent, 0).toFixed(2)}
+          Used: ${dailyStatus.percent}% &middot; Remaining: ${symbol}${Math.max(dailyStatus.limit - dailyStatus.spent, 0).toFixed(2)}
         </div>
       </div>
     `;
@@ -387,11 +464,11 @@ function buildEmailTemplate(
           <span style="background-color: ${badgeColor}22; color: ${badgeColor}; padding: 4px 10px; border-radius: 99px; font-weight: 800; font-size: 12px;">${highestMonthly}% Reached</span>
         </div>
         <p style="margin: 0; font-size: 15px; color: ${textColor};">
-          You have spent <strong>€${monthlyStatus.spent.toFixed(2)}</strong> out of your monthly limit of <strong>€${monthlyStatus.limit.toFixed(2)}</strong>.
+          You have spent <strong>${symbol}${monthlyStatus.spent.toFixed(2)}</strong> out of your monthly limit of <strong>${symbol}${monthlyStatus.limit.toFixed(2)}</strong>.
         </p>
         ${renderProgressBar(monthlyStatus.percent)}
         <div style="text-align: right; font-size: 13px; font-weight: 700; color: ${textColor};">
-          Used: ${monthlyStatus.percent}% &middot; Remaining: €${Math.max(monthlyStatus.limit - monthlyStatus.spent, 0).toFixed(2)}
+          Used: ${monthlyStatus.percent}% &middot; Remaining: ${symbol}${Math.max(monthlyStatus.limit - monthlyStatus.spent, 0).toFixed(2)}
         </div>
       </div>
     `;

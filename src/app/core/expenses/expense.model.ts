@@ -34,6 +34,7 @@ export interface Expense {
   category: ExpenseCategory;
   transactionType: TransactionType;
   paymentMethod: PaymentMethod | null;
+  currency: string;
   photoStoragePath?: string | null;
   photoFileName?: string | null;
   photoContentType?: ExpensePhotoContentType | null;
@@ -48,6 +49,7 @@ export interface ExpenseDraft {
   category: ExpenseCategory;
   transactionType: TransactionType;
   paymentMethod: PaymentMethod;
+  currency: string;
   occurredAt: Timestamp;
 }
 
@@ -61,6 +63,7 @@ export function normalizeExpense(
       | 'id'
       | 'transactionType'
       | 'paymentMethod'
+      | 'currency'
       | 'photoStoragePath'
       | 'photoFileName'
       | 'photoContentType'
@@ -70,6 +73,7 @@ export function normalizeExpense(
     paymentMethod: isPaymentMethod(data['paymentMethod'])
       ? data['paymentMethod']
       : null,
+    currency: typeof data['currency'] === 'string' ? data['currency'] : 'EUR',
     ...normalizeExpensePhoto(data),
   };
 }
