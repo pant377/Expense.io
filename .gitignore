@@ -24,6 +24,7 @@ client_secret_*.json
 serviceAccountKey.json
 *.pem
 *.p12
+e-statement.pdf
 
 # IDEs and editors
 .idea/

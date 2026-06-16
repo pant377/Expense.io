@@ -714,6 +714,25 @@ h2 {
   letter-spacing: -0.035em;
 }
 
+.expense-form-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.expense-form-heading > div {
+  min-width: 0;
+}
+
+.expense-import-button {
+  flex: 0 0 auto;
+}
+
+.expense-form-card > :is(.error-message, .success-message) {
+  margin-top: 1rem;
+}
+
 .expense-form-card form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1377,6 +1396,14 @@ h2 {
 
   .expense-form-card form {
     grid-template-columns: 1fr;
+  }
+
+  .expense-form-heading {
+    flex-direction: column;
+  }
+
+  .expense-import-button {
+    width: 100%;
   }
 
   .expense-photo-heading {

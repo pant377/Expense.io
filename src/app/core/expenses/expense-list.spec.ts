@@ -35,10 +35,10 @@ describe('expense list', () => {
     expense('middle-entry', 'Café', 'Food', '2026-06-13', '2026-06-13T09:00:00Z'),
   ];
 
-  it('sorts by creation time instead of the expense date', () => {
+  it('sorts by occurredAt descending before using creation time as a tie-breaker', () => {
     expect(
       buildExpenseList(expenses, EMPTY_EXPENSE_LIST_FILTERS).map(({ id }) => id),
-    ).toEqual(['new-backdated', 'middle-entry', 'older-entry']);
+    ).toEqual(['middle-entry', 'older-entry', 'new-backdated']);
   });
 
   it('searches descriptions case-insensitively and without accents', () => {

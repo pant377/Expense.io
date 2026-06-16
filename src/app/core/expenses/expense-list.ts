@@ -59,6 +59,12 @@ export function buildExpenseList(
       );
     })
     .sort((left, right) => {
+      const occurredDifference =
+        right.occurredAt.toMillis() - left.occurredAt.toMillis();
+      if (occurredDifference) {
+        return occurredDifference;
+      }
+
       const createdDifference = createdAtMillis(right) - createdAtMillis(left);
 
       return createdDifference || right.id.localeCompare(left.id);

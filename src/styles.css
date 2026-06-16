@@ -338,7 +338,8 @@ a {
 .settings-modal,
 .delete-account-modal,
 .edit-expense-modal,
-.recurring-modal {
+.recurring-modal,
+.statement-import-modal {
   width: min(620px, 100%);
   max-height: min(760px, calc(100dvh - 2rem));
   padding: clamp(1.25rem, 4vw, 2rem);
@@ -359,6 +360,10 @@ a {
 
 .recurring-modal {
   width: min(760px, 100%);
+}
+
+.statement-import-modal {
+  width: min(1080px, 100%);
 }
 
 .settings-modal-header {
@@ -1244,6 +1249,164 @@ app-dashboard .breakdown-panel:not(.pie-mode) .category-breakdown {
   line-height: 1.5;
 }
 
+.statement-import-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  margin-bottom: 1rem;
+  color: var(--muted);
+  background: #f7f9f9;
+  border: 1px solid #e7eeef;
+  border-radius: 14px;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.statement-import-summary strong {
+  color: var(--primary-dark);
+}
+
+.statement-import-table {
+  display: grid;
+  max-height: min(54dvh, 520px);
+  gap: 0.45rem;
+  padding-bottom: 0.25rem;
+  overflow: auto;
+}
+
+.statement-import-row {
+  display: grid;
+  min-width: 960px;
+  grid-template-columns: 72px 136px minmax(250px, 1fr) 172px 130px 160px 150px;
+  align-items: start;
+  gap: 0.55rem;
+  padding: 0.65rem;
+  background: #fbfcfc;
+  border: 1px solid #e5edef;
+  border-radius: 12px;
+}
+
+.statement-import-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  align-items: center;
+  padding-block: 0.55rem;
+  color: var(--muted);
+  background: #eef6f4;
+  border-color: #d3e5e2;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.statement-import-row input,
+.statement-import-row select {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0.5rem 0.6rem;
+  color: var(--ink);
+  background: white;
+  border: 1px solid #ccd8de;
+  border-radius: 9px;
+  outline: none;
+}
+
+.statement-import-row input:focus,
+.statement-import-row select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(10, 124, 116, 0.1);
+}
+
+.statement-import-check {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+}
+
+.statement-import-check input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.statement-import-check span {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  background: white;
+  border: 2px solid #b7c7cf;
+  border-radius: 6px;
+}
+
+.statement-import-check input:checked + span {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.statement-import-check input:checked + span::after {
+  width: 6px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  content: "";
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+
+.statement-import-check input:focus-visible + span {
+  outline: 3px solid rgba(10, 124, 116, 0.18);
+  outline-offset: 2px;
+}
+
+.statement-description-cell {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+.statement-description-cell small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statement-amount-cell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px;
+  gap: 0.35rem;
+}
+
+.statement-date-input {
+  min-width: 0;
+}
+
+.statement-import-row.import-row-disabled {
+  opacity: 0.56;
+}
+
+.statement-import-row.import-row-invalid {
+  background: #fff8f7;
+  border-color: #efc5c0;
+}
+
+.statement-import-row.import-row-invalid input,
+.statement-import-row.import-row-invalid select {
+  border-color: #d98f87;
+}
+
+.statement-import-actions {
+  margin-top: 1rem;
+}
+
 app-dashboard .summary-grid {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
@@ -1369,6 +1532,7 @@ app-dashboard .expense-item.income-transaction:hover {
 :root[data-theme="dark"] .delete-account-modal,
 :root[data-theme="dark"] .edit-expense-modal,
 :root[data-theme="dark"] .recurring-modal,
+:root[data-theme="dark"] .statement-import-modal,
 :root[data-theme="dark"] .delete-modal {
   background: var(--surface);
   border-color: rgba(231, 239, 243, 0.09);
@@ -1516,6 +1680,8 @@ app-dashboard .expense-item.income-transaction:hover {
 :root[data-theme="dark"] .chart-panel,
 :root[data-theme="dark"] .breakdown-panel,
 :root[data-theme="dark"] .expense-list-filters,
+:root[data-theme="dark"] .statement-import-summary,
+:root[data-theme="dark"] .statement-import-row,
 :root[data-theme="dark"] .delete-preview {
   background: #111f25;
   border-color: #2b3d45;
@@ -1528,6 +1694,9 @@ app-dashboard .expense-item.income-transaction:hover {
 :root[data-theme="dark"] .filter-control select,
 :root[data-theme="dark"] .expense-filter-control input,
 :root[data-theme="dark"] .expense-filter-control select,
+:root[data-theme="dark"] .statement-import-row input,
+:root[data-theme="dark"] .statement-import-row select,
+:root[data-theme="dark"] .statement-import-check span,
 :root[data-theme="dark"] .pagination-button,
 :root[data-theme="dark"] .button-secondary,
 :root[data-theme="dark"] .theme-toggle {
@@ -1537,10 +1706,23 @@ app-dashboard .expense-item.income-transaction:hover {
 }
 
 :root[data-theme="dark"] .field.field-invalid input,
-:root[data-theme="dark"] .field.field-invalid select {
+:root[data-theme="dark"] .field.field-invalid select,
+:root[data-theme="dark"] .statement-import-row.import-row-invalid input,
+:root[data-theme="dark"] .statement-import-row.import-row-invalid select {
   background: #321f22;
   border-color: var(--danger);
   box-shadow: 0 0 0 3px rgba(239, 115, 115, 0.12);
+}
+
+:root[data-theme="dark"] .statement-import-row.import-row-invalid {
+  background: #241c1f;
+  border-color: #7b3d42;
+}
+
+:root[data-theme="dark"] .statement-import-head {
+  color: #9fb3bd;
+  background: #173a3a;
+  border-color: #295b58;
 }
 
 :root[data-theme="dark"] .filter-control select {

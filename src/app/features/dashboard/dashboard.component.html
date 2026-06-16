@@ -103,16 +103,47 @@
 
       <section class="primary-workspace">
         <aside class="expense-form-card">
-          <div>
-            <p class="eyebrow">{{ t('expense.newEyebrow') }}</p>
-            <h2>
-              {{
-                expenseForm.controls.transactionType.value === 'income'
-                  ? t('expense.addIncome')
-                  : t('expense.addExpense')
-              }}
-            </h2>
+          <div class="expense-form-heading">
+            <div>
+              <p class="eyebrow">{{ t('expense.newEyebrow') }}</p>
+              <h2>
+                {{
+                  expenseForm.controls.transactionType.value === 'income'
+                    ? t('expense.addIncome')
+                    : t('expense.addExpense')
+                }}
+              </h2>
+            </div>
+            <input
+              #statementPdfInput
+              class="visually-hidden"
+              type="file"
+              accept="application/pdf,.pdf"
+              (change)="selectStatementPdf($event)"
+            >
+            <button
+              class="activity-tool-button expense-import-button"
+              type="button"
+              [disabled]="isReadingStatement()"
+              (click)="statementPdfInput.click()"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                <path d="M14 2v6h6"></path>
+                <path d="M9 15h6"></path>
+                <path d="M9 18h4"></path>
+              </svg>
+              <span>{{ isReadingStatement() ? t('import.reading') : t('import.pdf') }}</span>
+            </button>
           </div>
+
+          @if (statementImportError() && !statementImportOpen()) {
+            <p class="error-message" role="alert">{{ statementImportError() }}</p>
+          }
+
+          @if (statementImportSuccess()) {
+            <p class="success-message" role="status">{{ statementImportSuccess() }}</p>
+          }
 
           <form [formGroup]="expenseForm" (ngSubmit)="addExpense()">
             <div class="field transaction-type-field">
@@ -1375,6 +1406,211 @@
             </div>
           }
       </section>
+
+      @if (statementImportOpen()) {
+        <div class="modal-backdrop" (click)="cancelStatementImport()">
+          <section
+            class="statement-import-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="statement-import-title"
+            (click)="$event.stopPropagation()"
+          >
+            <div class="settings-modal-header">
+              <div>
+                <p class="eyebrow">{{ t('import.eyebrow') }}</p>
+                <h2 id="statement-import-title">{{ t('import.title') }}</h2>
+                <p class="modal-description">
+                  {{ t('import.description', { file: statementImportFileName() }) }}
+                </p>
+              </div>
+              <button
+                class="modal-close-button"
+                type="button"
+                [attr.aria-label]="t('import.cancel')"
+                (click)="cancelStatementImport()"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div class="statement-import-summary">
+              <span>{{ t('import.detected', { count: statementImportDrafts().length }) }}</span>
+              <strong>{{ t('import.selected', { count: selectedStatementImportCount() }) }}</strong>
+            </div>
+
+            @if (statementImportError()) {
+              <p class="error-message" role="alert">{{ statementImportError() }}</p>
+            }
+
+            <div
+              class="statement-import-table"
+              role="table"
+              [attr.aria-label]="t('import.tableAria')"
+            >
+              <div class="statement-import-row statement-import-head" role="row">
+                <span role="columnheader">{{ t('import.include') }}</span>
+                <span role="columnheader">{{ t('expense.date') }}</span>
+                <span role="columnheader">{{ t('expense.description') }}</span>
+                <span role="columnheader">{{ t('expense.amount') }}</span>
+                <span role="columnheader">{{ t('expense.transactionType') }}</span>
+                <span role="columnheader">{{ t('expense.category') }}</span>
+                <span role="columnheader">{{ t('expense.paymentMethod') }}</span>
+              </div>
+
+              @for (draft of statementImportDrafts(); track draft.importId) {
+                <article
+                  class="statement-import-row"
+                  role="row"
+                  [class.import-row-disabled]="!draft.selected"
+                  [class.import-row-invalid]="
+                    draft.selected && isStatementImportDraftInvalid(draft)
+                  "
+                >
+                  <label class="statement-import-check">
+                    <input
+                      type="checkbox"
+                      [checked]="draft.selected"
+                      [attr.aria-label]="t('import.include')"
+                      (change)="toggleStatementImportDraft(
+                        draft.importId,
+                        $any($event.target).checked
+                      )"
+                    >
+                    <span aria-hidden="true"></span>
+                  </label>
+
+                  <input
+                    class="statement-date-input"
+                    type="date"
+                    [value]="draft.occurredOn"
+                    [attr.aria-label]="t('expense.date')"
+                    (change)="updateStatementImportDate(
+                      draft.importId,
+                      $any($event.target).value
+                    )"
+                  >
+
+                  <label class="statement-description-cell">
+                    <input
+                      type="text"
+                      maxlength="120"
+                      [value]="draft.description"
+                      [attr.aria-label]="t('expense.description')"
+                      (input)="updateStatementImportDescription(
+                        draft.importId,
+                        $any($event.target).value
+                      )"
+                    >
+                    <small [attr.title]="draft.sourceLine">{{ draft.sourceLine }}</small>
+                  </label>
+
+                  <div class="statement-amount-cell">
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      [value]="draft.amountCents / 100"
+                      [attr.aria-label]="t('expense.amount')"
+                      (input)="updateStatementImportAmount(
+                        draft.importId,
+                        $any($event.target).value
+                      )"
+                    >
+                  <select
+                    [value]="draft.currency"
+                    [attr.aria-label]="t('expense.currency')"
+                    (change)="updateStatementImportCurrency(
+                        draft.importId,
+                        $any($event.target).value
+                    )"
+                  >
+                      @for (curr of currencies; track curr) {
+                        <option [value]="curr" [selected]="draft.currency === curr">
+                          {{ curr }}
+                        </option>
+                      }
+                    </select>
+                  </div>
+
+                  <select
+                    [value]="draft.transactionType"
+                    [attr.aria-label]="t('expense.transactionType')"
+                    (change)="updateStatementImportType(
+                      draft.importId,
+                      $any($event.target).value
+                    )"
+                  >
+                    @for (type of transactionTypes; track type) {
+                      <option [value]="type" [selected]="draft.transactionType === type">
+                        {{ transactionTypeLabel(type) }}
+                      </option>
+                    }
+                  </select>
+
+                  <select
+                    [value]="draft.category"
+                    [attr.aria-label]="t('expense.category')"
+                    (change)="updateStatementImportCategory(
+                      draft.importId,
+                      $any($event.target).value
+                    )"
+                  >
+                    @for (category of allCategories; track category) {
+                      <option [value]="category" [selected]="draft.category === category">
+                        {{ categoryLabel(category) }}
+                      </option>
+                    }
+                  </select>
+
+                  <select
+                    [value]="draft.paymentMethod"
+                    [attr.aria-label]="t('expense.paymentMethod')"
+                    (change)="updateStatementImportPaymentMethod(
+                      draft.importId,
+                      $any($event.target).value
+                    )"
+                  >
+                    @for (method of paymentMethods; track method) {
+                      <option
+                        [value]="method"
+                        [selected]="draft.paymentMethod === method"
+                      >
+                        {{ paymentMethodLabel(method) }}
+                      </option>
+                    }
+                  </select>
+                </article>
+              }
+            </div>
+
+            <div class="modal-actions statement-import-actions">
+              <button
+                class="button button-secondary"
+                type="button"
+                [disabled]="isSavingStatementImport()"
+                (click)="cancelStatementImport()"
+              >
+                {{ t('import.cancel') }}
+              </button>
+              <button
+                class="button button-primary"
+                type="button"
+                [disabled]="
+                  isSavingStatementImport() || !selectedStatementImportCount()
+                "
+                (click)="importStatementTransactions()"
+              >
+                {{
+                  isSavingStatementImport()
+                    ? t('import.saving')
+                    : t('import.save')
+                }}
+              </button>
+            </div>
+          </section>
+        </div>
+      }
 
       @if (selectedBreakdownCategory(); as activeCategory) {
         <div class="modal-backdrop" (click)="closeBreakdownTransactions()">

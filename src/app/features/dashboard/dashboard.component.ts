@@ -49,6 +49,10 @@ import {
 import { CategoryIconComponent } from '../../core/expenses/category-icon.component';
 import { buildExpenseCsv } from '../../core/expenses/expense-export';
 import {
+  PdfStatementTransactionDraft,
+  parsePdfStatementTransactions,
+} from '../../core/expenses/pdf-statement-import';
+import {
   EMPTY_EXPENSE_LIST_FILTERS,
   ExpenseListCategory,
   ExpenseListFilters,
@@ -87,6 +91,15 @@ import { ThemeService } from '../../core/theme/theme.service';
 
 interface PieSegment extends CategoryBreakdown {
   path: string;
+}
+
+interface StatementImportReviewItem extends PdfStatementTransactionDraft {
+  selected: boolean;
+}
+
+interface PdfTextItem {
+  str: string;
+  transform?: readonly unknown[];
 }
 
 @Component({
@@ -151,6 +164,8 @@ export class DashboardComponent {
   readonly isSavingLimits = signal(false);
   readonly isDeleting = signal(false);
   readonly isUpdatingExpense = signal(false);
+  readonly isReadingStatement = signal(false);
+  readonly isSavingStatementImport = signal(false);
   readonly isDeletingAccount = signal(false);
   readonly isResettingExpenses = signal(false);
   readonly recurringActionId = signal<string | null>(null);
@@ -159,16 +174,21 @@ export class DashboardComponent {
   readonly limitSuccess = signal('');
   readonly deleteError = signal('');
   readonly editError = signal('');
+  readonly statementImportError = signal('');
+  readonly statementImportSuccess = signal('');
   readonly recurringError = signal('');
   readonly accountDeleteError = signal('');
   readonly loadError = signal('');
   readonly settingsOpen = signal(false);
   readonly deleteAccountOpen = signal(false);
   readonly recurringOpen = signal(false);
+  readonly statementImportOpen = signal(false);
   readonly categoryMenuOpen = signal(false);
   readonly expensePendingDelete = signal<Expense | null>(null);
   readonly expensePendingEdit = signal<Expense | null>(null);
   readonly recurringSchedules = signal<RecurringExpenseSchedule[]>([]);
+  readonly statementImportFileName = signal('');
+  readonly statementImportDrafts = signal<StatementImportReviewItem[]>([]);
   readonly hoveredPieCategory = signal<CategoryBreakdown | null>(null);
   readonly expensePage = signal(1);
   readonly expensePageSize = signal(5);
@@ -196,6 +216,7 @@ export class DashboardComponent {
   private readonly expensePhotoUrls = signal<Record<string, string>>({});
   private readonly photoUrlRequests = new Set<string>();
   private activePhotoPaths = new Set<string>();
+  private readonly maxStatementPdfBytes = 12 * 1024 * 1024;
 
   readonly expenseForm = this.formBuilder.group({
     description: [
@@ -267,6 +288,7 @@ export class DashboardComponent {
         this.settingsOpen() ||
         this.deleteAccountOpen() ||
         this.recurringOpen() ||
+        this.statementImportOpen() ||
         this.expensePendingDelete() !== null ||
         this.expensePendingEdit() !== null ||
         this.selectedBreakdownCategory() !== null;
@@ -668,6 +690,152 @@ export class DashboardComponent {
 
     const separator = baseUrl.includes('?') ? '&' : '?';
     return `${baseUrl}${separator}v=${expense.updatedAt.toMillis()}`;
+  }
+
+  selectStatementPdf(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    input.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    this.statementImportSuccess.set('');
+    this.statementImportError.set('');
+
+    if (!this.isPdfFile(file)) {
+      this.statementImportError.set(this.t('import.pdfTypeError'));
+      return;
+    }
+
+    if (file.size <= 0 || file.size > this.maxStatementPdfBytes) {
+      this.statementImportError.set(this.t('import.pdfSizeError'));
+      return;
+    }
+
+    void this.readStatementPdf(file);
+  }
+
+  toggleStatementImportDraft(importId: string, selected: boolean): void {
+    this.updateStatementImportDraft(importId, { selected });
+  }
+
+  updateStatementImportDate(importId: string, value: string): void {
+    this.updateStatementImportDraft(importId, { occurredOn: value });
+  }
+
+  updateStatementImportDescription(importId: string, value: string): void {
+    this.updateStatementImportDraft(importId, { description: value });
+  }
+
+  updateStatementImportAmount(importId: string, value: string): void {
+    try {
+      this.updateStatementImportDraft(importId, {
+        amountCents: eurosToCents(value),
+      });
+    } catch {
+      this.updateStatementImportDraft(importId, { amountCents: 0 });
+    }
+  }
+
+  updateStatementImportCurrency(importId: string, value: string): void {
+    this.updateStatementImportDraft(importId, {
+      currency: this.currencies.includes(value) ? value : 'EUR',
+    });
+  }
+
+  updateStatementImportType(importId: string, value: string): void {
+    this.updateStatementImportDraft(importId, {
+      transactionType: value as TransactionType,
+    });
+  }
+
+  updateStatementImportCategory(importId: string, value: string): void {
+    this.updateStatementImportDraft(importId, {
+      category: value as ExpenseCategory,
+    });
+  }
+
+  updateStatementImportPaymentMethod(importId: string, value: string): void {
+    this.updateStatementImportDraft(importId, {
+      paymentMethod: value as PaymentMethod,
+    });
+  }
+
+  selectedStatementImportCount(): number {
+    return this.statementImportDrafts().filter((draft) => draft.selected).length;
+  }
+
+  isStatementImportDraftInvalid(draft: StatementImportReviewItem): boolean {
+    return (
+      !draft.description.trim() ||
+      draft.amountCents <= 0 ||
+      !draft.occurredOn ||
+      !draft.currency ||
+      !draft.paymentMethod
+    );
+  }
+
+  cancelStatementImport(): void {
+    if (!this.isSavingStatementImport()) {
+      this.statementImportOpen.set(false);
+      this.statementImportDrafts.set([]);
+      this.statementImportFileName.set('');
+      this.statementImportError.set('');
+    }
+  }
+
+  async importStatementTransactions(): Promise<void> {
+    const user = this.authService.currentUser;
+    const selectedDrafts = this.statementImportDrafts().filter(
+      (draft) => draft.selected,
+    );
+
+    if (!user) {
+      return;
+    }
+
+    if (!selectedDrafts.length) {
+      this.statementImportError.set(this.t('import.noneSelected'));
+      return;
+    }
+
+    if (selectedDrafts.some((draft) => this.isStatementImportDraftInvalid(draft))) {
+      this.statementImportError.set(this.t('import.invalidDraft'));
+      return;
+    }
+
+    this.isSavingStatementImport.set(true);
+    this.statementImportError.set('');
+
+    try {
+      for (const draft of selectedDrafts) {
+        await this.expenseService.addExpense(user.uid, {
+          description: draft.description.trim(),
+          amountCents: draft.amountCents,
+          category: draft.category,
+          transactionType: draft.transactionType,
+          paymentMethod: draft.paymentMethod,
+          currency: draft.currency || 'EUR',
+          occurredAt: this.expenseService.dateToTimestamp(draft.occurredOn),
+        });
+      }
+
+      this.expensePage.set(1);
+      this.statementImportOpen.set(false);
+      this.statementImportDrafts.set([]);
+      this.statementImportFileName.set('');
+      this.statementImportSuccess.set(
+        this.t('import.success', { count: selectedDrafts.length }),
+      );
+    } catch (error: unknown) {
+      this.statementImportError.set(
+        firebaseErrorMessage(error, this.language.current()),
+      );
+    } finally {
+      this.isSavingStatementImport.set(false);
+    }
   }
 
   updateAnalyticsMode(mode: AnalyticsMode): void {
@@ -1245,6 +1413,7 @@ export class DashboardComponent {
     this.cancelDeleteAccount();
     this.cancelEditExpense();
     this.closeRecurringExpenses();
+    this.cancelStatementImport();
     this.closeBreakdownTransactions();
   }
 
@@ -1375,6 +1544,139 @@ export class DashboardComponent {
       })
       .catch(() => undefined)
       .finally(() => this.photoUrlRequests.delete(storagePath));
+  }
+
+  private async readStatementPdf(file: File): Promise<void> {
+    this.isReadingStatement.set(true);
+    this.statementImportOpen.set(false);
+    this.statementImportDrafts.set([]);
+    this.statementImportFileName.set(file.name);
+    this.statementImportError.set('');
+
+    try {
+      const text = await this.extractPdfText(file);
+      const drafts = parsePdfStatementTransactions(text, {
+        defaultCurrency: this.spendingLimitForm.controls.baseCurrency.value || 'EUR',
+        defaultYear: new Date().getFullYear(),
+      }).map((draft) => ({
+        ...draft,
+        selected: true,
+      }));
+
+      if (!drafts.length) {
+        this.statementImportError.set(this.t('import.empty'));
+        this.statementImportFileName.set('');
+        return;
+      }
+
+      this.statementImportDrafts.set(drafts);
+      this.statementImportOpen.set(true);
+    } catch {
+      this.statementImportError.set(this.t('import.readError'));
+      this.statementImportFileName.set('');
+    } finally {
+      this.isReadingStatement.set(false);
+    }
+  }
+
+  private async extractPdfText(file: File): Promise<string> {
+    const pdfjs = await import('pdfjs-dist');
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+      'pdfjs-dist/build/pdf.worker.mjs',
+      import.meta.url,
+    ).toString();
+
+    const document = await pdfjs.getDocument({
+      data: new Uint8Array(await file.arrayBuffer()),
+    }).promise;
+    const pages: string[] = [];
+
+    try {
+      for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+        const page = await document.getPage(pageNumber);
+        const textContent = await page.getTextContent();
+        pages.push(this.pdfTextRows(textContent.items));
+        page.cleanup();
+      }
+    } finally {
+      await document.destroy();
+    }
+
+    return pages.join('\n');
+  }
+
+  private pdfTextRows(items: readonly unknown[]): string {
+    const rows: {
+      y: number;
+      parts: { x: number; text: string }[];
+    }[] = [];
+
+    for (const item of items) {
+      if (!this.isPdfTextItem(item)) {
+        continue;
+      }
+
+      const text = item.str.replace(/\s+/g, ' ').trim();
+      if (!text) {
+        continue;
+      }
+
+      const x =
+        typeof item.transform?.[4] === 'number' ? item.transform[4] : 0;
+      const y =
+        typeof item.transform?.[5] === 'number' ? item.transform[5] : 0;
+      let row = rows.find((candidate) => Math.abs(candidate.y - y) < 2);
+
+      if (!row) {
+        row = { y, parts: [] };
+        rows.push(row);
+      }
+
+      row.parts.push({ x, text });
+    }
+
+    return rows
+      .sort((left, right) => right.y - left.y)
+      .map((row) => this.renderPdfTextRow(row.parts))
+      .join('\n');
+  }
+
+  private renderPdfTextRow(parts: { x: number; text: string }[]): string {
+    return parts
+      .sort((left, right) => left.x - right.x)
+      .reduce((line, part) => {
+        const column = Math.max(0, Math.round(part.x / 4));
+        const spacing = Math.max(line ? 1 : 0, column - line.length);
+
+        return `${line}${' '.repeat(spacing)}${part.text}`;
+      }, '')
+      .trimEnd();
+  }
+
+  private isPdfTextItem(item: unknown): item is PdfTextItem {
+    return (
+      typeof item === 'object' &&
+      item !== null &&
+      typeof (item as { str?: unknown }).str === 'string'
+    );
+  }
+
+  private isPdfFile(file: File): boolean {
+    return (
+      file.type === 'application/pdf' ||
+      file.name.toLocaleLowerCase().endsWith('.pdf')
+    );
+  }
+
+  private updateStatementImportDraft(
+    importId: string,
+    update: Partial<StatementImportReviewItem>,
+  ): void {
+    this.statementImportDrafts.update((drafts) =>
+      drafts.map((draft) =>
+        draft.importId === importId ? { ...draft, ...update } : draft,
+      ),
+    );
   }
 
   private donutSegmentPath(startAngle: number, endAngle: number): string {
