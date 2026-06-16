@@ -79,6 +79,11 @@ const EN_TRANSLATIONS = {
   'settings.cancel': 'Cancel',
   'settings.deletingAccount': 'Deleting account...',
   'settings.confirmDelete': 'Delete permanently',
+  'settings.resetExpenses': 'Reset all expenses',
+  'settings.resetting': 'Resetting...',
+  'settings.resetDescription':
+    'Permanently delete all your recorded transactions and receipt photos.',
+  'settings.resetConfirmation': 'Are you sure you want to delete all your recorded expenses and receipt photos? This cannot be undone.',
   'limits.eyebrow': 'Spending guardrails',
   'limits.title': 'Daily and monthly limits',
   'limits.description':
@@ -218,6 +223,7 @@ const EN_TRANSLATIONS = {
   'expense.emptyDescription':
     'Add your first transaction and your overview will appear here.',
   'expense.loading': 'Loading your transactions...',
+  'expense.rowsPerPage': 'Rows:',
   'edit.eyebrow': 'Edit transaction',
   'edit.title': 'Update transaction',
   'edit.description': 'Changes are reflected immediately in totals and charts.',
@@ -366,6 +372,11 @@ const EL_TRANSLATIONS: Record<TranslationKey, string> = {
   'settings.cancel': 'Ακύρωση',
   'settings.deletingAccount': 'Διαγραφή λογαριασμού...',
   'settings.confirmDelete': 'Οριστική διαγραφή',
+  'settings.resetExpenses': 'Επαναφορά όλων των εξόδων',
+  'settings.resetting': 'Επαναφορά...',
+  'settings.resetDescription':
+    'Οριστική διαγραφή όλων των καταγεγραμμένων συναλλαγών και φωτογραφιών αποδείξεων.',
+  'settings.resetConfirmation': 'Είστε σίγουροι ότι θέλετε να διαγράψετε όλα τα καταγεγραμμένα έξοδα και τις φωτογραφίες αποδείξεων; Αυτή η ενέργεια δεν αναιρείται.',
   'limits.eyebrow': 'Έλεγχος εξόδων',
   'limits.title': 'Ημερήσια και μηνιαία όρια',
   'limits.description':
@@ -506,6 +517,7 @@ const EL_TRANSLATIONS: Record<TranslationKey, string> = {
   'expense.emptyDescription':
     'Πρόσθεσε την πρώτη συναλλαγή και η επισκόπησή σου θα εμφανιστεί εδώ.',
   'expense.loading': 'Φόρτωση συναλλαγών...',
+  'expense.rowsPerPage': 'Γραμμές:',
   'edit.eyebrow': 'Επεξεργασία συναλλαγής',
   'edit.title': 'Ενημέρωση συναλλαγής',
   'edit.description':

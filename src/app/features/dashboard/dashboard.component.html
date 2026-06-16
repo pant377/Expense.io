@@ -1029,10 +1029,6 @@
                           [style.width.%]="item.percentage"
                         ></span>
                       </div>
-                    } @else {
-                      <span class="legend-percentage">
-                        {{ item.percentage | number: '1.0-1' }}%
-                      </span>
                     }
                   </div>
                 }
@@ -1060,6 +1056,21 @@
               <small class="list-order">{{ t('expense.newestAdded') }}</small>
             </div>
             <div class="activity-actions">
+              <div class="rows-per-page-container">
+                <span class="rows-select-label" aria-hidden="true">{{ t('expense.rowsPerPage') }}</span>
+                <select
+                  id="rows-select"
+                  class="rows-select"
+                  [value]="expensePageSize()"
+                  (change)="changePageSize($any($event.target).value)"
+                  aria-label="Rows per page"
+                >
+                  <option [value]="5">5</option>
+                  <option [value]="10">10</option>
+                  <option [value]="15">15</option>
+                </select>
+              </div>
+
               <button
                 class="activity-tool-button"
                 type="button"
@@ -1674,6 +1685,21 @@
             </div>
           }
         </div>
+      </section>
+
+      <section class="danger-zone" aria-labelledby="reset-expenses-title">
+        <div>
+          <h3 id="reset-expenses-title">{{ t('settings.resetExpenses') }}</h3>
+          <p>{{ t('settings.resetDescription') }}</p>
+        </div>
+        <button
+          class="button reset-expenses-button"
+          type="button"
+          [disabled]="isResettingExpenses()"
+          (click)="confirmResetExpenses()"
+        >
+          {{ isResettingExpenses() ? t('settings.resetting') : t('settings.resetExpenses') }}
+        </button>
       </section>
 
       <section class="danger-zone" aria-labelledby="danger-zone-title">

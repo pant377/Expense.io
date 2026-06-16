@@ -51,6 +51,10 @@ body {
   transition: color 180ms ease, background-color 180ms ease;
 }
 
+body.modal-open {
+  overflow: hidden !important;
+}
+
 :root[data-theme="dark"] body {
   background:
     radial-gradient(circle at 10% 0%, rgba(43, 184, 170, 0.11), transparent 34rem),
@@ -580,7 +584,8 @@ a {
   border-radius: 16px;
 }
 
-.delete-account-button {
+.delete-account-button,
+.reset-expenses-button {
   flex: 0 0 auto;
   color: white;
   background: var(--danger);
@@ -1972,7 +1977,8 @@ app-dashboard .expense-item.income-transaction:hover {
     flex-direction: column;
   }
 
-  .delete-account-button {
+  .delete-account-button,
+  .reset-expenses-button {
     width: 100%;
   }
 

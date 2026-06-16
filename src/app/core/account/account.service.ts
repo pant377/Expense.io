@@ -50,4 +50,21 @@ export class AccountService {
     finalBatch.delete(doc(firestore, `users/${userId}`));
     await finalBatch.commit();
   }
+
+  async resetUserExpenses(userId: string): Promise<void> {
+    await this.expensePhotoService.deleteUserPhotos(userId);
+
+    const expenses = await getDocs(collection(firestore, `users/${userId}/expenses`));
+    const references = expenses.docs.map((expense) => expense.ref);
+
+    for (let index = 0; index < references.length; index += DELETE_BATCH_SIZE) {
+      const batch = writeBatch(firestore);
+
+      references
+        .slice(index, index + DELETE_BATCH_SIZE)
+        .forEach((reference) => batch.delete(reference));
+
+      await batch.commit();
+    }
+  }
 }

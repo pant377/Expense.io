@@ -6,6 +6,7 @@ import {
   HostListener,
   inject,
   signal,
+  effect,
 } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -151,6 +152,7 @@ export class DashboardComponent {
   readonly isDeleting = signal(false);
   readonly isUpdatingExpense = signal(false);
   readonly isDeletingAccount = signal(false);
+  readonly isResettingExpenses = signal(false);
   readonly recurringActionId = signal<string | null>(null);
   readonly actionError = signal('');
   readonly limitError = signal('');
@@ -169,7 +171,7 @@ export class DashboardComponent {
   readonly recurringSchedules = signal<RecurringExpenseSchedule[]>([]);
   readonly hoveredPieCategory = signal<CategoryBreakdown | null>(null);
   readonly expensePage = signal(1);
-  readonly expensePageSize = 12;
+  readonly expensePageSize = signal(5);
   readonly expenseListFilters = signal<ExpenseListFilters>({
     ...EMPTY_EXPENSE_LIST_FILTERS,
   });
@@ -257,6 +259,23 @@ export class DashboardComponent {
     this.destroyRef.onDestroy(() => {
       this.revokePreviewUrl(this.newExpensePhotoPreviewUrl());
       this.revokePreviewUrl(this.editExpensePhotoPreviewUrl());
+      document.body.classList.remove('modal-open');
+    });
+
+    effect(() => {
+      const isAnyModalOpen =
+        this.settingsOpen() ||
+        this.deleteAccountOpen() ||
+        this.recurringOpen() ||
+        this.expensePendingDelete() !== null ||
+        this.expensePendingEdit() !== null ||
+        this.selectedBreakdownCategory() !== null;
+
+      if (isAnyModalOpen) {
+        document.body.classList.add('modal-open');
+      } else {
+        document.body.classList.remove('modal-open');
+      }
     });
   }
 
@@ -384,10 +403,11 @@ export class DashboardComponent {
     this.expenseViewModel$,
     toObservable(this.analyticsFilters),
     toObservable(this.expensePage),
+    toObservable(this.expensePageSize),
     toObservable(this.expenseListFilters),
     toObservable(this.language.current),
   ]).pipe(
-    map(([viewModel, filters, expensePage, expenseListFilters, language]) => {
+    map(([viewModel, filters, expensePage, expensePageSize, expenseListFilters, language]) => {
       if (!viewModel) {
         return null;
       }
@@ -424,12 +444,17 @@ export class DashboardComponent {
         expensePagination: paginateItems(
           filteredExpenses,
           expensePage,
-          this.expensePageSize,
+          expensePageSize,
         ),
       };
     }),
     shareReplay({ bufferSize: 1, refCount: true }),
   );
+
+  changePageSize(size: string): void {
+    this.expensePageSize.set(Number(size));
+    this.expensePage.set(1);
+  }
 
   async addExpense(): Promise<void> {
     if (this.expenseForm.invalid) {
@@ -868,6 +893,28 @@ export class DashboardComponent {
       );
     } finally {
       this.isDeletingAccount.set(false);
+    }
+  }
+
+  async confirmResetExpenses(): Promise<void> {
+    const user = this.authService.currentUser;
+    if (!user) {
+      return;
+    }
+
+    const confirmed = window.confirm(this.t('settings.resetConfirmation'));
+    if (!confirmed) {
+      return;
+    }
+
+    this.isResettingExpenses.set(true);
+    try {
+      await this.accountService.resetUserExpenses(user.uid);
+      this.closeSettings();
+    } catch (error: unknown) {
+      window.alert(firebaseErrorMessage(error, this.language.current()));
+    } finally {
+      this.isResettingExpenses.set(false);
     }
   }
 
