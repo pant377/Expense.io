@@ -531,7 +531,19 @@
   height: 100%;
   grid-template-rows: 1fr 20px;
   gap: 0.4rem;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
   text-align: center;
+}
+
+.chart-column:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 9px;
 }
 
 .bar-track {

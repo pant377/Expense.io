@@ -858,7 +858,7 @@
                 [class.merged-chart]="
                   vm.analyticsFilters.transactionType === 'merged'
                 "
-                role="img"
+                role="group"
                 [attr.aria-label]="
                   t('analytics.chartAria', {
                     chart: vm.analytics.chartLabel,
@@ -867,18 +867,22 @@
                 "
               >
                 @for (point of vm.analytics.points; track point.label; let index = $index) {
-                  <div
+                  <button
+                    type="button"
                     class="chart-column"
                     [attr.data-tooltip]="
                       (point.amountCents / 100
                         | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale())
                     "
                     [attr.aria-label]="
-                      point.label +
+                      t('analytics.openChartTransactions', {
+                        period: point.label
+                      }) +
                       ': ' +
-                      (point.amountCents / 100
-                        | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale())
+                      ((point.amountCents / 100
+                        | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()) ?? '')
                     "
+                    (click)="openChartPointTransactions(index, point.label)"
                   >
                     <div
                       class="bar-track"
@@ -913,7 +917,7 @@
                         {{ point.shortLabel }}
                       }
                     </small>
-                  </div>
+                  </button>
                 }
               </div>
             </div>
@@ -1687,6 +1691,89 @@
                     <strong>{{ expense.description }}</strong>
                     <div class="breakdown-transaction-metadata">
                       <small>
+                        {{ paymentMethodLabel(expense.paymentMethod) }} &middot;
+                        {{
+                          timestampToDate(expense.occurredAt)
+                            | date: 'd MMM y' : undefined : language.locale()
+                        }}
+                      </small>
+                      @if (expensePhotoUrl(expense); as photoUrl) {
+                        <a
+                          class="expense-photo-link"
+                          [href]="photoUrl"
+                          target="_blank"
+                          rel="noopener"
+                          [attr.aria-label]="
+                            t('expense.photoViewAria', {
+                              description: expense.description
+                            })
+                          "
+                        >
+                          <img
+                            [src]="photoUrl"
+                            [alt]="expense.photoFileName ?? t('expense.photo')"
+                          >
+                          <span>{{ t('expense.photoView') }}</span>
+                        </a>
+                      }
+                    </div>
+                  </div>
+                  <strong
+                    class="breakdown-transaction-amount"
+                    [class.income-amount]="expense.transactionType === 'income'"
+                  >
+                    {{ expense.transactionType === 'income' ? '+' : '-' }}
+                    {{
+                      expense.amountCents / 100
+                        | currency: expense.currency : 'symbol' : '1.2-2' : language.locale()
+                    }}
+                  </strong>
+                </article>
+              } @empty {
+                <p class="empty-message">{{ t('analytics.noData') }}</p>
+              }
+            </div>
+          </section>
+        </div>
+      }
+
+      @if (selectedChartPoint(); as activePoint) {
+        <div class="modal-backdrop" (click)="closeChartPointTransactions()">
+          <section
+            class="breakdown-transactions-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="chart-point-transactions-title"
+            (click)="$event.stopPropagation()"
+          >
+            <div class="settings-modal-header">
+              <div>
+                <p class="eyebrow">{{ activePoint.label }}</p>
+                <h2 id="chart-point-transactions-title">
+                  {{ t('analytics.chartTransactions') }}
+                </h2>
+                <p class="modal-description">
+                  {{ categoryLabel(vm.analyticsFilters.category) }}
+                </p>
+              </div>
+              <button
+                class="modal-close-button"
+                type="button"
+                [attr.aria-label]="t('settings.close')"
+                (click)="closeChartPointTransactions()"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div class="breakdown-transactions-list">
+              @for (expense of getChartPointTransactions(vm.expenses, activePoint, vm.analyticsFilters); track expense.id) {
+                <article class="breakdown-transaction-item" [class.income-transaction]="expense.transactionType === 'income'">
+                  <div class="breakdown-transaction-info">
+                    <strong>{{ expense.description }}</strong>
+                    <div class="breakdown-transaction-metadata">
+                      <small>
+                        {{ categoryLabel(expense.category) }} &middot;
                         {{ paymentMethodLabel(expense.paymentMethod) }} &middot;
                         {{
                           timestampToDate(expense.occurredAt)

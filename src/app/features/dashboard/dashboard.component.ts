@@ -105,6 +105,11 @@ interface StatementImportReviewItem extends PdfStatementTransactionDraft {
   selected: boolean;
 }
 
+interface ChartPointSelection {
+  index: number;
+  label: string;
+}
+
 interface PdfTextItem {
   str: string;
   transform?: readonly unknown[];
@@ -222,6 +227,7 @@ export class DashboardComponent {
   });
   readonly breakdownView = signal<'bars' | 'pie'>('bars');
   readonly selectedBreakdownCategory = signal<ExpenseCategory | null>(null);
+  readonly selectedChartPoint = signal<ChartPointSelection | null>(null);
   readonly newExpensePhoto = signal<File | null>(null);
   readonly newExpensePhotoPreviewUrl = signal('');
   readonly newExpensePhotoError =
@@ -318,7 +324,8 @@ export class DashboardComponent {
         this.statementImportOpen() ||
         this.expensePendingDelete() !== null ||
         this.expensePendingEdit() !== null ||
-        this.selectedBreakdownCategory() !== null;
+        this.selectedBreakdownCategory() !== null ||
+        this.selectedChartPoint() !== null;
 
       if (isAnyModalOpen) {
         document.body.classList.add('modal-open');
@@ -1566,6 +1573,7 @@ export class DashboardComponent {
     this.closeRecurringExpenses();
     this.cancelStatementImport();
     this.closeBreakdownTransactions();
+    this.closeChartPointTransactions();
   }
 
   private currentMonthTotal(
@@ -1952,6 +1960,44 @@ export class DashboardComponent {
 
   closeBreakdownTransactions(): void {
     this.selectedBreakdownCategory.set(null);
+  }
+
+  openChartPointTransactions(index: number, label: string): void {
+    this.selectedChartPoint.set({ index, label });
+  }
+
+  closeChartPointTransactions(): void {
+    this.selectedChartPoint.set(null);
+  }
+
+  getChartPointTransactions(
+    expenses: Expense[],
+    selection: ChartPointSelection,
+    filters: AnalyticsFilters,
+  ): Expense[] {
+    return expenses
+      .filter((expense) => {
+        if (
+          filters.transactionType !== 'merged' &&
+          expense.transactionType !== filters.transactionType
+        ) {
+          return false;
+        }
+        if (filters.category !== 'All' && expense.category !== filters.category) {
+          return false;
+        }
+
+        const date = expense.occurredAt.toDate();
+        const matchesYear = date.getFullYear() === filters.year;
+        const matchesPoint =
+          filters.mode === 'month'
+            ? date.getMonth() === filters.month &&
+              date.getDate() === selection.index + 1
+            : date.getMonth() === selection.index;
+
+        return matchesYear && matchesPoint;
+      })
+      .sort((a, b) => b.occurredAt.toMillis() - a.occurredAt.toMillis());
   }
 
   getBreakdownTransactions(

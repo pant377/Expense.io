@@ -169,6 +169,8 @@ const EN_TRANSLATIONS = {
   'analytics.mergedChartHint':
     'Income is above the line. Expenses exceeding income appear below it in red.',
   'analytics.chartAria': '{{chart}} for {{period}}',
+  'analytics.openChartTransactions': 'Open transactions for {{period}}',
+  'analytics.chartTransactions': 'Bar transactions',
   'analytics.breakdown': 'Category breakdown',
   'analytics.breakdownDescription': 'Share of selected-period spending.',
   'analytics.incomeBreakdownDescription':
@@ -507,6 +509,8 @@ const EL_TRANSLATIONS: Record<TranslationKey, string> = {
   'analytics.mergedChartHint':
     'Τα έσοδα εμφανίζονται πάνω από τη γραμμή. Όταν τα έξοδα είναι περισσότερα, το αποτέλεσμα εμφανίζεται κόκκινο από κάτω.',
   'analytics.chartAria': '{{chart}} για {{period}}',
+  'analytics.openChartTransactions': 'Άνοιγμα συναλλαγών για {{period}}',
+  'analytics.chartTransactions': 'Συναλλαγές μπάρας',
   'analytics.breakdown': 'Ανάλυση ανά κατηγορία',
   'analytics.breakdownDescription': 'Μερίδιο εξόδων για την επιλεγμένη περίοδο.',
   'analytics.incomeBreakdownDescription':
