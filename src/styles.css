@@ -488,12 +488,42 @@ a {
   margin-top: 1rem;
 }
 
+.balance-settings-form {
+  display: grid;
+  grid-template-columns: 1fr 0.7fr;
+  align-items: start;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
 .limit-settings-form .save-limits-button,
 .limit-settings-form .error-message,
 .limit-settings-form .success-message,
 .limit-settings-form .limit-validation,
 .limit-settings-form .limit-income-toggle {
   grid-column: 1 / -1;
+}
+
+.balance-settings-form .field:first-child,
+.balance-settings-form .balance-current-note,
+.balance-settings-form .limit-validation,
+.balance-settings-form .error-message,
+.balance-settings-form .success-message,
+.balance-settings-form .balance-settings-actions {
+  grid-column: 1 / -1;
+}
+
+.balance-current-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.balance-settings-actions {
+  display: grid;
+  grid-template-columns: 0.8fr 1fr;
+  gap: 0.75rem;
 }
 
 .limit-income-toggle {
@@ -1268,6 +1298,42 @@ app-dashboard .breakdown-panel:not(.pie-mode) .category-breakdown {
   color: var(--primary-dark);
 }
 
+.statement-balance-detected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem;
+  margin-bottom: 1rem;
+  background: #eefaf7;
+  border: 1px solid #b9e2d9;
+  border-radius: 14px;
+}
+
+.statement-balance-detected > div {
+  display: grid;
+  min-width: 0;
+  gap: 0.15rem;
+}
+
+.statement-balance-detected span,
+.statement-balance-detected small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.statement-balance-detected strong {
+  color: var(--ink);
+  font-family: "Manrope", sans-serif;
+  font-size: 1.2rem;
+}
+
+.statement-balance-detected .button {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding-inline: 1rem;
+}
+
 .statement-import-table {
   display: grid;
   max-height: min(54dvh, 520px);
@@ -1278,8 +1344,15 @@ app-dashboard .breakdown-panel:not(.pie-mode) .category-breakdown {
 
 .statement-import-row {
   display: grid;
-  min-width: 960px;
-  grid-template-columns: 72px 136px minmax(250px, 1fr) 172px 130px 160px 150px;
+  min-width: min(930px, 100%);
+  grid-template-columns:
+    40px
+    120px
+    minmax(180px, 1fr)
+    140px
+    minmax(118px, 130px)
+    minmax(128px, 145px)
+    minmax(136px, 150px);
   align-items: start;
   gap: 0.55rem;
   padding: 0.65rem;
@@ -1300,6 +1373,7 @@ app-dashboard .breakdown-panel:not(.pie-mode) .category-breakdown {
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.06em;
+  line-height: 1.25;
   text-transform: uppercase;
 }
 
@@ -1381,7 +1455,7 @@ app-dashboard .breakdown-panel:not(.pie-mode) .category-breakdown {
 
 .statement-amount-cell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 72px;
+  grid-template-columns: minmax(0, 1fr) 64px;
   gap: 0.35rem;
 }
 
@@ -1681,6 +1755,7 @@ app-dashboard .expense-item.income-transaction:hover {
 :root[data-theme="dark"] .breakdown-panel,
 :root[data-theme="dark"] .expense-list-filters,
 :root[data-theme="dark"] .statement-import-summary,
+:root[data-theme="dark"] .statement-balance-detected,
 :root[data-theme="dark"] .statement-import-row,
 :root[data-theme="dark"] .delete-preview {
   background: #111f25;
@@ -2140,7 +2215,9 @@ app-dashboard .expense-item.income-transaction:hover {
     touch-action: manipulation;
   }
 
-  .limit-settings-form {
+  .limit-settings-form,
+  .balance-settings-form,
+  .balance-settings-actions {
     grid-template-columns: 1fr;
   }
 

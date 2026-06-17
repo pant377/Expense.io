@@ -23,6 +23,19 @@ export interface PdfStatementTransactionDraft {
   sourceLine: string;
 }
 
+export interface PdfStatementBalanceSnapshot {
+  amountCents: number;
+  currency: string;
+  effectiveDate: string;
+  institution: 'eurobank' | 'piraeus' | 'unknown';
+  sourceLine: string;
+}
+
+export interface PdfStatementImportResult {
+  transactions: PdfStatementTransactionDraft[];
+  balance: PdfStatementBalanceSnapshot | null;
+}
+
 interface DateMatch {
   raw: string;
   index: number;
@@ -342,6 +355,96 @@ export function parsePdfStatementTransactions(
   return drafts;
 }
 
+export function parsePdfStatement(
+  text: string,
+  options: PdfStatementImportOptions = {},
+): PdfStatementImportResult {
+  const transactions = parsePdfStatementTransactions(text, options);
+  const defaultCurrency = normalizeCurrency(options.defaultCurrency) || 'EUR';
+  const defaultYear =
+    options.defaultYear ?? inferStatementYear(text) ?? new Date().getFullYear();
+  const variant = detectStatementVariant(text);
+
+  return {
+    transactions,
+    balance: detectStatementBalance(text, transactions, {
+      defaultCurrency,
+      defaultYear,
+      variant,
+    }),
+  };
+}
+
+function detectStatementBalance(
+  text: string,
+  transactions: PdfStatementTransactionDraft[],
+  options: {
+    defaultCurrency: string;
+    defaultYear: number;
+    variant: StatementVariant;
+  },
+): PdfStatementBalanceSnapshot | null {
+  const candidates: PdfStatementBalanceSnapshot[] = [];
+  const fallbackDate = latestTransactionDate(transactions);
+  const institution = detectStatementInstitution(text, options.variant);
+
+  for (const line of statementLines(text)) {
+    const normalized = normalizeForMatching(line);
+
+    if (!isBalanceLabelLine(line, normalized)) {
+      continue;
+    }
+
+    const amount = findAmounts(line, options.defaultCurrency).at(-1);
+    if (!amount) {
+      continue;
+    }
+
+    const effectiveDate =
+      findDates(line, options.defaultYear).at(-1)?.occurredOn ?? fallbackDate;
+    if (!effectiveDate) {
+      continue;
+    }
+
+    candidates.push({
+      amountCents: signedAmountCents(amount),
+      currency: amount.currency,
+      effectiveDate,
+      institution,
+      sourceLine: line.slice(0, 400),
+    });
+  }
+
+  const profile = detectStatementProfile(text);
+  if (profile.balanceColumnIndex !== null) {
+    for (const line of statementLines(text)) {
+      const dateMatch = findDates(line, options.defaultYear).at(-1);
+      if (!dateMatch) {
+        continue;
+      }
+
+      const rowAmounts = findAmounts(line, options.defaultCurrency);
+      const balanceAmount =
+        rowAmounts
+          .filter((amount) => amount.endIndex > profile.balanceColumnIndex!)
+          .at(-1) ?? rowAmounts.at(-1);
+      if (!balanceAmount) {
+        continue;
+      }
+
+      candidates.push({
+        amountCents: signedAmountCents(balanceAmount),
+        currency: balanceAmount.currency,
+        effectiveDate: dateMatch.occurredOn,
+        institution,
+        sourceLine: line.slice(0, 400),
+      });
+    }
+  }
+
+  return candidates.at(-1) ?? null;
+}
+
 function parsePiraeusStatementTransactions(
   text: string,
   options: Required<
@@ -659,6 +762,40 @@ function isSummaryLine(line: string): boolean {
   return SUMMARY_LINE_PATTERN.test(normalizeForMatching(line));
 }
 
+function isBalanceLabelLine(line: string, normalizedLine: string): boolean {
+  const mergedPiraeusLine = normalizeForMatching(piraeusMergedText(line));
+  const hasBalanceLabel =
+    normalizedLine.includes('balance') ||
+    normalizedLine.includes('\u03c5\u03c0\u03bf\u03bb\u03bf\u03b9\u03c0\u03bf') ||
+    mergedPiraeusLine.includes('\u03c5\u03c0\u03bf\u03bb\u03bf\u03b9\u03c0\u03bf');
+  const isOpeningBalance =
+    /\b(opening|previous|brought)\b/iu.test(normalizedLine) ||
+    normalizedLine.includes(
+      '\u03c0\u03c1\u03bf\u03b7\u03b3\u03bf\u03c5\u03bc\u03b5\u03bd\u03bf',
+    ) ||
+    mergedPiraeusLine.includes(
+      '\u03c0\u03c1\u03bf\u03b7\u03b3\u03bf\u03c5\u03bc\u03b5\u03bd\u03bf',
+    );
+
+  return hasBalanceLabel && !isOpeningBalance;
+}
+
+function signedAmountCents(amount: AmountCandidate): number {
+  return amount.explicitSign < 0 ? -amount.amountCents : amount.amountCents;
+}
+
+function latestTransactionDate(
+  transactions: PdfStatementTransactionDraft[],
+): string | null {
+  return transactions.reduce<string | null>(
+    (latest, transaction) =>
+      latest === null || transaction.occurredOn > latest
+        ? transaction.occurredOn
+        : latest,
+    null,
+  );
+}
+
 function inferStatementYear(text: string): number | null {
   const match = /\b(19\d{2}|20\d{2})\b/u.exec(text);
 
@@ -682,6 +819,31 @@ function detectStatementVariant(text: string): StatementVariant {
     (hasPiraeusHeader || hasNoMailMarker || hasPiraeusCodes)
     ? 'piraeus'
     : 'generic';
+}
+
+function detectStatementInstitution(
+  text: string,
+  variant: StatementVariant,
+): PdfStatementBalanceSnapshot['institution'] {
+  if (variant === 'piraeus') {
+    return 'piraeus';
+  }
+
+  const normalized = normalizeForMatching(text);
+  const profile = detectStatementProfile(text);
+
+  if (
+    normalized.includes('eurobank') ||
+    (
+      profile.debitColumnIndex !== null &&
+      profile.creditColumnIndex !== null &&
+      profile.balanceColumnIndex !== null
+    )
+  ) {
+    return 'eurobank';
+  }
+
+  return 'unknown';
 }
 
 interface StatementProfile {

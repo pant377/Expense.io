@@ -45,6 +45,9 @@ export class AccountService {
       doc(firestore, `users/${userId}/settings/custom-categories`),
     );
     finalBatch.delete(
+      doc(firestore, `users/${userId}/settings/balance-baseline`),
+    );
+    finalBatch.delete(
       doc(firestore, `users/${userId}/settings/exchange-rates`),
     );
     finalBatch.delete(doc(firestore, `users/${userId}`));

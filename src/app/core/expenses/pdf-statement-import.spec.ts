@@ -1,4 +1,7 @@
-import { parsePdfStatementTransactions } from './pdf-statement-import';
+import {
+  parsePdfStatement,
+  parsePdfStatementTransactions,
+} from './pdf-statement-import';
 
 describe('PDF statement import', () => {
   it('detects signed card expenses and bank-transfer income', () => {
@@ -203,6 +206,44 @@ describe('PDF statement import', () => {
         transactionType: 'income',
       }),
     ]);
+  });
+
+  it('detects the latest Eurobank balance column as a statement balance', () => {
+    const result = parsePdfStatement(
+      [
+        '                              Description     Value Date     Debit          Credit        Balance',
+        ' 02/01/26   POO KAFES          02/01/26        5,00                         EUR 14.799,53',
+        ' 02/01/26   POI IRIS PAYMENT   02/01/26                       70,00        EUR 14.869,53',
+      ].join('\n'),
+      { defaultCurrency: 'EUR' },
+    );
+
+    expect(result.balance).toEqual(
+      jasmine.objectContaining({
+        amountCents: 1486953,
+        currency: 'EUR',
+        effectiveDate: '2026-01-02',
+        institution: 'eurobank',
+      }),
+    );
+  });
+
+  it('detects Greek balance label rows as statement balances', () => {
+    const result = parsePdfStatement(
+      [
+        '01/06/2026 Coffee shop -3.20',
+        '\u03a5\u03c0\u03cc\u03bb\u03bf\u03b9\u03c0\u03bf 1.234,56 EUR',
+      ].join('\n'),
+      { defaultCurrency: 'EUR' },
+    );
+
+    expect(result.balance).toEqual(
+      jasmine.objectContaining({
+        amountCents: 123456,
+        currency: 'EUR',
+        effectiveDate: '2026-06-01',
+      }),
+    );
   });
 
   it('parses Piraeus card-purchase blocks using the merchant detail line', () => {

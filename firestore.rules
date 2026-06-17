@@ -158,6 +158,37 @@ service cloud.firestore {
         && request.resource.data.updatedAt is timestamp;
     }
 
+    function validBalanceBaseline() {
+      return request.resource.data.keys().hasOnly([
+          'amountCents',
+          'currency',
+          'effectiveDate',
+          'source',
+          'institution',
+          'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'amountCents',
+          'currency',
+          'effectiveDate',
+          'source',
+          'institution',
+          'updatedAt'
+        ])
+        && request.resource.data.amountCents is int
+        && request.resource.data.amountCents >= -100000000000
+        && request.resource.data.amountCents <= 100000000000
+        && request.resource.data.currency in ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD']
+        && request.resource.data.effectiveDate is string
+        && request.resource.data.effectiveDate.size() == 10
+        && request.resource.data.source in ['manual', 'statement']
+        && (
+          request.resource.data.institution == null
+          || request.resource.data.institution in ['eurobank', 'piraeus', 'unknown']
+        )
+        && request.resource.data.updatedAt is timestamp;
+    }
+
     function validRecurringExpense() {
       return request.resource.data.keys().hasOnly([
           'description',
@@ -242,6 +273,12 @@ service cloud.firestore {
       match /settings/custom-categories {
         allow read: if signedInAs(userId);
         allow create, update: if signedInAs(userId) && validCustomCategories();
+        allow delete: if signedInAs(userId);
+      }
+
+      match /settings/balance-baseline {
+        allow read: if signedInAs(userId);
+        allow create, update: if signedInAs(userId) && validBalanceBaseline();
         allow delete: if signedInAs(userId);
       }
 

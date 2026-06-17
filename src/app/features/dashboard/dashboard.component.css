@@ -145,6 +145,10 @@
   font-size: 0.72rem;
 }
 
+.muted-money {
+  color: var(--muted);
+}
+
 .primary-summary {
   color: white;
   background: var(--primary-dark);
@@ -727,6 +731,13 @@ h2 {
 
 .expense-import-button {
   flex: 0 0 auto;
+}
+
+.expense-import-support {
+  margin: 0.55rem 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
 
 .expense-form-card > :is(.error-message, .success-message) {

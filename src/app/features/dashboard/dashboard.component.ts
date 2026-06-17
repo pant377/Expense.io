@@ -26,6 +26,13 @@ import { CustomCategoryService } from '../../core/expenses/custom-category.servi
 
 import { AccountService } from '../../core/account/account.service';
 import { AuthService } from '../../core/auth/auth.service';
+import {
+  BalanceBaseline,
+  EMPTY_BALANCE_BASELINE,
+  amountToSignedCents,
+  buildEstimatedBalanceCents,
+} from '../../core/balance/balance-baseline.model';
+import { BalanceBaselineService } from '../../core/balance/balance-baseline.service';
 import { firebaseErrorMessage } from '../../core/errors/firebase-error';
 import {
   AnalyticsCategory,
@@ -50,7 +57,8 @@ import { CategoryIconComponent } from '../../core/expenses/category-icon.compone
 import { buildExpenseCsv } from '../../core/expenses/expense-export';
 import {
   PdfStatementTransactionDraft,
-  parsePdfStatementTransactions,
+  PdfStatementBalanceSnapshot,
+  parsePdfStatement,
 } from '../../core/expenses/pdf-statement-import';
 import {
   EMPTY_EXPENSE_LIST_FILTERS,
@@ -134,6 +142,7 @@ export class DashboardComponent {
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly accountService = inject(AccountService);
   private readonly authService = inject(AuthService);
+  private readonly balanceBaselineService = inject(BalanceBaselineService);
   private readonly expenseService = inject(ExpenseService);
   private readonly expensePhotoService = inject(ExpensePhotoService);
   private readonly recurringExpenseService = inject(RecurringExpenseService);
@@ -162,6 +171,7 @@ export class DashboardComponent {
   readonly months = Array.from({ length: 12 }, (_, value) => value);
   readonly isSaving = signal(false);
   readonly isSavingLimits = signal(false);
+  readonly isSavingBalanceBaseline = signal(false);
   readonly isDeleting = signal(false);
   readonly isUpdatingExpense = signal(false);
   readonly isReadingStatement = signal(false);
@@ -172,6 +182,8 @@ export class DashboardComponent {
   readonly actionError = signal('');
   readonly limitError = signal('');
   readonly limitSuccess = signal('');
+  readonly balanceBaselineError = signal('');
+  readonly balanceBaselineSuccess = signal('');
   readonly deleteError = signal('');
   readonly editError = signal('');
   readonly statementImportError = signal('');
@@ -189,6 +201,12 @@ export class DashboardComponent {
   readonly recurringSchedules = signal<RecurringExpenseSchedule[]>([]);
   readonly statementImportFileName = signal('');
   readonly statementImportDrafts = signal<StatementImportReviewItem[]>([]);
+  readonly detectedStatementBalance = signal<PdfStatementBalanceSnapshot | null>(
+    null,
+  );
+  readonly currentBalanceBaseline = signal<BalanceBaseline>({
+    ...EMPTY_BALANCE_BASELINE,
+  });
   readonly hoveredPieCategory = signal<CategoryBreakdown | null>(null);
   readonly expensePage = signal(1);
   readonly expensePageSize = signal(5);
@@ -271,6 +289,15 @@ export class DashboardComponent {
     baseCurrency: ['EUR', Validators.required],
   });
 
+  readonly balanceBaselineForm = this.formBuilder.group({
+    amount: [
+      null as number | null,
+      [Validators.required, Validators.min(-1_000_000_000), Validators.max(1_000_000_000)],
+    ],
+    currency: ['EUR', Validators.required],
+    effectiveDate: [this.today(), Validators.required],
+  });
+
   readonly deleteAccountForm = this.formBuilder.group({
     confirmation: ['', Validators.required],
     password: [''],
@@ -324,6 +351,21 @@ export class DashboardComponent {
         catchError(() => of({ EUR: 1.0, USD: 1.08, GBP: 0.85, CHF: 0.96, JPY: 168.0, CAD: 1.48, AUD: 1.62 })),
       );
 
+      const balanceBaseline$ = this.balanceBaselineService
+        .watchBaseline(user.uid)
+        .pipe(
+          tap((baseline) => {
+            this.currentBalanceBaseline.set(baseline);
+            this.syncBalanceBaselineForm(baseline);
+          }),
+          catchError((error: unknown) => {
+            this.balanceBaselineError.set(
+              firebaseErrorMessage(error, this.language.current()),
+            );
+            return of({ ...EMPTY_BALANCE_BASELINE });
+          }),
+        );
+
       const recurringSchedules$ = this.recurringExpenseService
         .watchSchedules(user.uid)
         .pipe(
@@ -352,10 +394,11 @@ export class DashboardComponent {
         ),
         limits$,
         rates$,
+        balanceBaseline$,
         recurringSchedules$,
         customCategories$,
       ]).pipe(
-        map(([expenses, limits, rates, recurringSchedules, customCategories]) => {
+        map(([expenses, limits, rates, balanceBaseline, recurringSchedules, customCategories]) => {
           const baseCurrency = limits.baseCurrency || 'EUR';
 
           const totalExpenseCents = expenses.reduce((sum, exp) => 
@@ -389,6 +432,7 @@ export class DashboardComponent {
             expenses,
             limits,
             rates,
+            balanceBaseline,
             recurringSchedules,
             customCategories,
             totalExpenseCents,
@@ -397,6 +441,11 @@ export class DashboardComponent {
             monthIncomeCents,
             monthBalanceCents: monthIncomeCents - monthExpenseCents,
             balanceCents: totalIncomeCents - totalExpenseCents,
+            estimatedBalanceCents: buildEstimatedBalanceCents(
+              expenses,
+              balanceBaseline,
+              rates,
+            ),
           };
         }),
         catchError((error: unknown) => {
@@ -406,6 +455,7 @@ export class DashboardComponent {
             expenses: [] as Expense[],
             limits: { ...EMPTY_SPENDING_LIMITS },
             rates: { EUR: 1.0, USD: 1.08, GBP: 0.85, CHF: 0.96, JPY: 168.0, CAD: 1.48, AUD: 1.62 } as Record<string, number>,
+            balanceBaseline: { ...EMPTY_BALANCE_BASELINE },
             recurringSchedules: [] as RecurringExpenseSchedule[],
             customCategories: [] as string[],
             totalExpenseCents: 0,
@@ -414,6 +464,7 @@ export class DashboardComponent {
             monthIncomeCents: 0,
             monthBalanceCents: 0,
             balanceCents: 0,
+            estimatedBalanceCents: null,
           });
         }),
       );
@@ -739,6 +790,88 @@ export class DashboardComponent {
     }
   }
 
+  async saveBalanceBaseline(
+    source: BalanceBaseline['source'] = 'manual',
+    institution: BalanceBaseline['institution'] = null,
+  ): Promise<void> {
+    if (this.balanceBaselineForm.invalid) {
+      this.balanceBaselineForm.markAllAsTouched();
+      return;
+    }
+
+    const user = this.authService.currentUser;
+    const { amount, currency, effectiveDate } =
+      this.balanceBaselineForm.getRawValue();
+
+    if (!user || amount === null) {
+      return;
+    }
+
+    this.isSavingBalanceBaseline.set(true);
+    this.balanceBaselineError.set('');
+    this.balanceBaselineSuccess.set('');
+
+    try {
+      await this.balanceBaselineService.saveBaseline(user.uid, {
+        amountCents: amountToSignedCents(amount),
+        currency: currency || 'EUR',
+        effectiveDate,
+        source,
+        institution,
+      });
+      this.balanceBaselineForm.markAsPristine();
+      this.balanceBaselineSuccess.set(this.t('balance.saved'));
+    } catch (error: unknown) {
+      this.balanceBaselineError.set(
+        firebaseErrorMessage(error, this.language.current()),
+      );
+    } finally {
+      this.isSavingBalanceBaseline.set(false);
+    }
+  }
+
+  async clearBalanceBaseline(): Promise<void> {
+    const user = this.authService.currentUser;
+
+    if (!user) {
+      return;
+    }
+
+    this.isSavingBalanceBaseline.set(true);
+    this.balanceBaselineError.set('');
+    this.balanceBaselineSuccess.set('');
+
+    try {
+      await this.balanceBaselineService.clearBaseline(user.uid);
+      this.balanceBaselineForm.reset({
+        amount: null,
+        currency: this.spendingLimitForm.controls.baseCurrency.value || 'EUR',
+        effectiveDate: this.today(),
+      });
+      this.balanceBaselineSuccess.set(this.t('balance.cleared'));
+    } catch (error: unknown) {
+      this.balanceBaselineError.set(
+        firebaseErrorMessage(error, this.language.current()),
+      );
+    } finally {
+      this.isSavingBalanceBaseline.set(false);
+    }
+  }
+
+  async useDetectedStatementBalance(): Promise<void> {
+    const balance = this.detectedStatementBalance();
+    if (!balance) {
+      return;
+    }
+
+    this.balanceBaselineForm.setValue({
+      amount: balance.amountCents / 100,
+      currency: balance.currency,
+      effectiveDate: balance.effectiveDate,
+    });
+    await this.saveBalanceBaseline('statement', balance.institution);
+  }
+
   updateStatementImportCurrency(importId: string, value: string): void {
     this.updateStatementImportDraft(importId, {
       currency: this.currencies.includes(value) ? value : 'EUR',
@@ -781,6 +914,7 @@ export class DashboardComponent {
     if (!this.isSavingStatementImport()) {
       this.statementImportOpen.set(false);
       this.statementImportDrafts.set([]);
+      this.detectedStatementBalance.set(null);
       this.statementImportFileName.set('');
       this.statementImportError.set('');
     }
@@ -825,6 +959,7 @@ export class DashboardComponent {
       this.expensePage.set(1);
       this.statementImportOpen.set(false);
       this.statementImportDrafts.set([]);
+      this.detectedStatementBalance.set(null);
       this.statementImportFileName.set('');
       this.statementImportSuccess.set(
         this.t('import.success', { count: selectedDrafts.length }),
@@ -1000,11 +1135,13 @@ export class DashboardComponent {
   openSettings(): void {
     this.limitError.set('');
     this.limitSuccess.set('');
+    this.balanceBaselineError.set('');
+    this.balanceBaselineSuccess.set('');
     this.settingsOpen.set(true);
   }
 
   closeSettings(): void {
-    if (!this.isSavingLimits()) {
+    if (!this.isSavingLimits() && !this.isSavingBalanceBaseline()) {
       this.settingsOpen.set(false);
     }
   }
@@ -1400,6 +1537,20 @@ export class DashboardComponent {
     return this.language.month(month);
   }
 
+  formatDateKey(dateKey: string): string {
+    const [year, month, day] = dateKey.split('-').map(Number);
+
+    if (!year || !month || !day) {
+      return dateKey;
+    }
+
+    return new Intl.DateTimeFormat(this.language.locale(), {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(new Date(year, month - 1, day, 12));
+  }
+
   @HostListener('document:click')
   closeCategoryMenu(): void {
     this.categoryMenuOpen.set(false);
@@ -1468,6 +1619,22 @@ export class DashboardComponent {
         alertThreshold80: (limits.alertThresholds || []).includes(80),
         alertThreshold99: (limits.alertThresholds || []).includes(99),
         baseCurrency: limits.baseCurrency || 'EUR',
+      },
+      { emitEvent: false },
+    );
+  }
+
+  private syncBalanceBaselineForm(baseline: BalanceBaseline): void {
+    if (this.balanceBaselineForm.dirty) {
+      return;
+    }
+
+    this.balanceBaselineForm.setValue(
+      {
+        amount:
+          baseline.amountCents === null ? null : baseline.amountCents / 100,
+        currency: baseline.currency || 'EUR',
+        effectiveDate: baseline.effectiveDate || this.today(),
       },
       { emitEvent: false },
     );
@@ -1550,15 +1717,17 @@ export class DashboardComponent {
     this.isReadingStatement.set(true);
     this.statementImportOpen.set(false);
     this.statementImportDrafts.set([]);
+    this.detectedStatementBalance.set(null);
     this.statementImportFileName.set(file.name);
     this.statementImportError.set('');
 
     try {
       const text = await this.extractPdfText(file);
-      const drafts = parsePdfStatementTransactions(text, {
+      const statement = parsePdfStatement(text, {
         defaultCurrency: this.spendingLimitForm.controls.baseCurrency.value || 'EUR',
         defaultYear: new Date().getFullYear(),
-      }).map((draft) => ({
+      });
+      const drafts = statement.transactions.map((draft) => ({
         ...draft,
         selected: true,
       }));
@@ -1570,6 +1739,7 @@ export class DashboardComponent {
       }
 
       this.statementImportDrafts.set(drafts);
+      this.detectedStatementBalance.set(statement.balance);
       this.statementImportOpen.set(true);
     } catch {
       this.statementImportError.set(this.t('import.readError'));

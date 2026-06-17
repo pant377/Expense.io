@@ -83,20 +83,25 @@
             </strong>
             <small>{{ t('dashboard.liveTotal') }}</small>
           </article>
-          <article class="summary-card">
-            <span>{{ t('dashboard.netBalance') }}</span>
-            <strong
-              [class.positive-money]="vm.balanceCents > 0"
-              [class.negative-money]="vm.balanceCents < 0"
-            >
-              {{
-                vm.balanceCents / 100
-                  | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
-              }}
-            </strong>
-            <small>
-              {{ t('dashboard.allTime') }}
-            </small>
+          <article class="summary-card estimated-balance-summary">
+            <span>{{ t('balance.estimated') }}</span>
+            @if (vm.estimatedBalanceCents !== null) {
+              <strong
+                [class.positive-money]="vm.estimatedBalanceCents > 0"
+                [class.negative-money]="vm.estimatedBalanceCents < 0"
+              >
+                {{
+                  vm.estimatedBalanceCents / 100
+                    | currency: vm.balanceBaseline.currency : 'symbol' : '1.2-2' : language.locale()
+                }}
+              </strong>
+              <small>
+                {{ t('balance.afterDate', { date: formatDateKey(vm.balanceBaseline.effectiveDate) }) }}
+              </small>
+            } @else {
+              <strong class="muted-money">--</strong>
+              <small>{{ t('balance.noBaseline') }}</small>
+            }
           </article>
         </div>
       </section>
@@ -136,6 +141,7 @@
               <span>{{ isReadingStatement() ? t('import.reading') : t('import.pdf') }}</span>
             </button>
           </div>
+          <p class="expense-import-support">{{ t('import.supportedBanks') }}</p>
 
           @if (statementImportError() && !statementImportOpen()) {
             <p class="error-message" role="alert">{{ statementImportError() }}</p>
@@ -1443,6 +1449,39 @@
               <p class="error-message" role="alert">{{ statementImportError() }}</p>
             }
 
+            @if (detectedStatementBalance(); as balance) {
+              <div class="statement-balance-detected">
+                <div>
+                  <span>{{ t('balance.detected') }}</span>
+                  <strong>
+                    {{
+                      balance.amountCents / 100
+                        | currency: balance.currency : 'symbol' : '1.2-2' : language.locale()
+                    }}
+                  </strong>
+                  <small>
+                    {{ t('balance.detectedDescription', { date: balance.effectiveDate }) }}
+                  </small>
+                </div>
+                <button
+                  class="button button-secondary"
+                  type="button"
+                  [disabled]="isSavingBalanceBaseline()"
+                  (click)="useDetectedStatementBalance()"
+                >
+                  {{ isSavingBalanceBaseline() ? t('balance.saving') : t('balance.useDetected') }}
+                </button>
+              </div>
+            }
+
+            @if (balanceBaselineError()) {
+              <p class="error-message" role="alert">{{ balanceBaselineError() }}</p>
+            }
+
+            @if (balanceBaselineSuccess()) {
+              <p class="success-message" role="status">{{ balanceBaselineSuccess() }}</p>
+            }
+
             <div
               class="statement-import-table"
               role="table"
@@ -1753,6 +1792,88 @@
             <span></span>
           </span>
         </button>
+      </section>
+
+      <section class="settings-section" aria-labelledby="balance-settings-title">
+        <div>
+          <h3 id="balance-settings-title">{{ t('balance.title') }}</h3>
+          <p>{{ t('balance.description') }}</p>
+        </div>
+
+        <form
+          class="balance-settings-form"
+          [formGroup]="balanceBaselineForm"
+          (ngSubmit)="saveBalanceBaseline()"
+        >
+          <div class="field">
+            <label for="balance-amount-settings">{{ t('balance.amount') }}</label>
+            <div class="amount-input">
+              <span aria-hidden="true">{{ currencySymbol(balanceBaselineForm.controls.currency.value) }}</span>
+              <input
+                id="balance-amount-settings"
+                type="number"
+                step="0.01"
+                formControlName="amount"
+                placeholder="0.00"
+              >
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="balance-currency-settings">{{ t('expense.currency') }}</label>
+            <select id="balance-currency-settings" formControlName="currency">
+              @for (curr of currencies; track curr) {
+                <option [value]="curr">{{ curr }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="balance-date-settings">{{ t('balance.effectiveDate') }}</label>
+            <input
+              id="balance-date-settings"
+              type="date"
+              formControlName="effectiveDate"
+            >
+            <small class="field-description">{{ t('balance.effectiveDateDescription') }}</small>
+          </div>
+
+          @if (currentBalanceBaseline().amountCents !== null) {
+            <p class="balance-current-note">
+              {{ t('balance.currentBaseline', { date: formatDateKey(currentBalanceBaseline().effectiveDate) }) }}
+            </p>
+          }
+
+          @if (balanceBaselineForm.invalid && balanceBaselineForm.touched) {
+            <p class="limit-validation" role="alert">{{ t('balance.invalid') }}</p>
+          }
+
+          @if (balanceBaselineError()) {
+            <p class="error-message" role="alert">{{ balanceBaselineError() }}</p>
+          }
+
+          @if (balanceBaselineSuccess()) {
+            <p class="success-message" role="status">{{ balanceBaselineSuccess() }}</p>
+          }
+
+          <div class="balance-settings-actions">
+            <button
+              class="button button-secondary"
+              type="button"
+              [disabled]="isSavingBalanceBaseline() || currentBalanceBaseline().amountCents === null"
+              (click)="clearBalanceBaseline()"
+            >
+              {{ t('balance.clear') }}
+            </button>
+            <button
+              class="button button-primary"
+              type="submit"
+              [disabled]="isSavingBalanceBaseline()"
+            >
+              {{ isSavingBalanceBaseline() ? t('balance.saving') : t('balance.save') }}
+            </button>
+          </div>
+        </form>
       </section>
 
       <section class="settings-section" aria-labelledby="limit-settings-title">
