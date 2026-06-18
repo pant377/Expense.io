@@ -44,8 +44,8 @@ const EN_TRANSLATIONS = {
   'dashboard.overviewDescription':
     'Capture income and spending as they happen and keep the full picture in sight.',
   'dashboard.summaryAria': 'Money summary',
-  'dashboard.thisMonth': 'Spending this month',
-  'dashboard.incomeThisMonth': 'Income this month',
+  'dashboard.totalIncomeEver': 'Total income ever',
+  'dashboard.totalSpendEver': 'Total spend ever',
   'dashboard.netBalanceThisMonth': 'Net balance this month',
   'dashboard.netBalance': 'Total net balance',
   'dashboard.allTime': 'Across all recorded transactions',
@@ -393,8 +393,8 @@ const EL_TRANSLATIONS: Record<TranslationKey, string> = {
   'dashboard.overviewDescription':
     'Κατέγραψε έσοδα και έξοδα τη στιγμή που συμβαίνουν και κράτησε τη συνολική εικόνα.',
   'dashboard.summaryAria': 'Σύνοψη χρημάτων',
-  'dashboard.thisMonth': 'Έξοδα αυτόν τον μήνα',
-  'dashboard.incomeThisMonth': 'Έσοδα αυτόν τον μήνα',
+  'dashboard.totalIncomeEver': 'Συνολικά έσοδα από πάντα',
+  'dashboard.totalSpendEver': 'Συνολικά έξοδα από πάντα',
   'dashboard.netBalanceThisMonth': 'Καθαρό υπόλοιπο αυτόν τον μήνα',
   'dashboard.netBalance': 'Συνολικό καθαρό υπόλοιπο',
   'dashboard.allTime': 'Σε όλες τις καταγεγραμμένες συναλλαγές',

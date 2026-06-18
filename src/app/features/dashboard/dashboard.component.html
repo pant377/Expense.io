@@ -51,20 +51,20 @@
 
         <div class="summary-grid" [attr.aria-label]="t('dashboard.summaryAria')">
           <article class="summary-card primary-summary">
-            <span>{{ t('dashboard.thisMonth') }}</span>
+            <span>{{ t('dashboard.totalIncomeEver') }}</span>
             <strong>
               {{
-                vm.monthExpenseCents / 100
+                vm.totalIncomeCents / 100
                   | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
               }}
             </strong>
             <small>{{ t('dashboard.liveTotal') }}</small>
           </article>
-          <article class="summary-card income-summary">
-            <span>{{ t('dashboard.incomeThisMonth') }}</span>
+          <article class="summary-card">
+            <span>{{ t('dashboard.totalSpendEver') }}</span>
             <strong>
               {{
-                vm.monthIncomeCents / 100
+                vm.totalExpenseCents / 100
                   | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
               }}
             </strong>
