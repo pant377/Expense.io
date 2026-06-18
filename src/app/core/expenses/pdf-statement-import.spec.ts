@@ -246,6 +246,61 @@ describe('PDF statement import', () => {
     );
   });
 
+  it('parses Alpha Bank statement rows using the statement period year and signed credit column', () => {
+    const result = parsePdfStatement(
+      [
+        'Κατάστημα: ΝΕΩΝ ΜΟΥΔΑΝΙΩΝ (815)                                      ALPHA Μισθοδοσία',
+        'Κινήσεις από: 01/10/2025 έως: 31/10/2025                              Ημερομηνία Εκδόσεως: 04/11/2025',
+        'Ημ/νία     Περιγραφή Συναλλαγής                                      Χρέωση/Πίστωση       Ημ/νία Αξίας (Valeur)',
+        '01/10  ΠΡΟΙΟΝ ΕΝΤΟΛΗΣ                  949                                      20,00         01/10/25',
+        '02/10  GOOGLE PLAY APPS                 99                                      -3,49         30/09/25',
+        '09/10  ΑΝΑΛΗΨΗ ΑΠΟ ΑΤΜ                 706 ΣΟΦΟΥΛΗ                            -120,00         09/10/25',
+        '30/10  ΠΡΟΚ ΜΙΣΘΗ 10 2025               96                                     400,00         30/10/25',
+        'Νέο Υπόλοιπο: € 420,47',
+      ].join('\n'),
+      { defaultCurrency: 'EUR', defaultYear: 2026 },
+    );
+
+    expect(result.transactions).toEqual([
+      jasmine.objectContaining({
+        occurredOn: '2025-10-01',
+        description: 'ΠΡΟΙΟΝ ΕΝΤΟΛΗΣ',
+        amountCents: 2000,
+        transactionType: 'income',
+        paymentMethod: 'bankTransfer',
+      }),
+      jasmine.objectContaining({
+        occurredOn: '2025-10-02',
+        description: 'GOOGLE PLAY APPS',
+        amountCents: 349,
+        transactionType: 'expense',
+        paymentMethod: 'card',
+      }),
+      jasmine.objectContaining({
+        occurredOn: '2025-10-09',
+        description: 'ΑΝΑΛΗΨΗ ΑΠΟ ΑΤΜ ΣΟΦΟΥΛΗ',
+        amountCents: 12000,
+        transactionType: 'expense',
+        paymentMethod: 'cash',
+      }),
+      jasmine.objectContaining({
+        occurredOn: '2025-10-30',
+        description: 'ΠΡΟΚ ΜΙΣΘΗ 10 2025',
+        amountCents: 40000,
+        transactionType: 'income',
+        paymentMethod: 'bankTransfer',
+      }),
+    ]);
+    expect(result.balance).toEqual(
+      jasmine.objectContaining({
+        amountCents: 42047,
+        currency: 'EUR',
+        effectiveDate: '2025-10-30',
+        institution: 'alpha',
+      }),
+    );
+  });
+
   it('parses Piraeus card-purchase blocks using the merchant detail line', () => {
     const transactions = parsePdfStatementTransactions(
       [

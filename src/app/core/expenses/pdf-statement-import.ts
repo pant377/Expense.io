@@ -27,7 +27,7 @@ export interface PdfStatementBalanceSnapshot {
   amountCents: number;
   currency: string;
   effectiveDate: string;
-  institution: 'eurobank' | 'piraeus' | 'unknown';
+  institution: 'alpha' | 'eurobank' | 'piraeus' | 'unknown';
   sourceLine: string;
 }
 
@@ -59,7 +59,20 @@ interface PiraeusTransactionBlock {
   detailLines: string[];
 }
 
-type StatementVariant = 'generic' | 'piraeus';
+interface AlphaStatementPeriod {
+  startDate: string;
+  endDate: string;
+}
+
+interface AlphaTransactionRow {
+  occurredOn: string;
+  description: string;
+  amount: AmountCandidate;
+  transactionCode: string | null;
+  sourceLine: string;
+}
+
+type StatementVariant = 'alpha' | 'generic' | 'piraeus';
 
 const SUPPORTED_CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD'];
 const CURRENCY_PATTERN = '(?:EUR|USD|GBP|CHF|JPY|CAD|AUD|€|\\$|£|¥)';
@@ -290,7 +303,17 @@ export function parsePdfStatementTransactions(
     options.defaultYear ?? inferStatementYear(text) ?? new Date().getFullYear();
   const maxTransactions = options.maxTransactions ?? 250;
 
-  if (detectStatementVariant(text) === 'piraeus') {
+  const variant = detectStatementVariant(text);
+
+  if (variant === 'alpha') {
+    return parseAlphaStatementTransactions(text, {
+      defaultCurrency,
+      defaultYear,
+      maxTransactions,
+    });
+  }
+
+  if (variant === 'piraeus') {
     return parsePiraeusStatementTransactions(text, {
       defaultCurrency,
       defaultYear,
@@ -443,6 +466,51 @@ function detectStatementBalance(
   }
 
   return candidates.at(-1) ?? null;
+}
+
+function parseAlphaStatementTransactions(
+  text: string,
+  options: Required<
+    Pick<PdfStatementImportOptions, 'defaultCurrency' | 'defaultYear' | 'maxTransactions'>
+  >,
+): PdfStatementTransactionDraft[] {
+  const rows = extractAlphaTransactionRows(text, options);
+  const seen = new Set<string>();
+  const drafts: PdfStatementTransactionDraft[] = [];
+
+  for (const [index, row] of rows.entries()) {
+    if (drafts.length >= options.maxTransactions) {
+      break;
+    }
+
+    const transactionType: TransactionType =
+      row.amount.explicitSign < 0 ? 'expense' : 'income';
+    const duplicateKey = [
+      row.occurredOn,
+      row.amount.amountCents,
+      transactionType,
+      normalizeForMatching(row.description),
+    ].join('|');
+
+    if (seen.has(duplicateKey)) {
+      continue;
+    }
+
+    seen.add(duplicateKey);
+    drafts.push({
+      importId: `${index}-${stableHash(duplicateKey)}`,
+      description: row.description,
+      amountCents: row.amount.amountCents,
+      category: inferCategory(row.description),
+      transactionType,
+      paymentMethod: inferAlphaPaymentMethod(row),
+      currency: row.amount.currency,
+      occurredOn: row.occurredOn,
+      sourceLine: row.sourceLine.slice(0, 400),
+    });
+  }
+
+  return drafts;
 }
 
 function parsePiraeusStatementTransactions(
@@ -804,6 +872,20 @@ function inferStatementYear(text: string): number | null {
 
 function detectStatementVariant(text: string): StatementVariant {
   const lines = statementLines(text).slice(0, 120);
+  const normalizedHeader = normalizeForMatching(lines.join(' '));
+  const hasAlphaHeader =
+    normalizedHeader.includes('alpha') &&
+    (
+      normalizedHeader.includes('χρεωση πιστωση') ||
+      normalizedHeader.includes('χρεωσηπιστωση') ||
+      normalizedHeader.includes('antigrafo kinhσεως logariasmou') ||
+      normalizedHeader.includes('αντιγραφο κινησεως λογαριασμου')
+    );
+
+  if (hasAlphaHeader) {
+    return 'alpha';
+  }
+
   const hasPiraeusHeader = lines.some((line) =>
     piraeusMergedText(line).includes('\u03a0\u0395\u0399\u03a1\u0391\u0399\u03a9\u03a3'),
   );
@@ -825,6 +907,10 @@ function detectStatementInstitution(
   text: string,
   variant: StatementVariant,
 ): PdfStatementBalanceSnapshot['institution'] {
+  if (variant === 'alpha') {
+    return 'alpha';
+  }
+
   if (variant === 'piraeus') {
     return 'piraeus';
   }
@@ -970,6 +1056,210 @@ function hasNormalizedWordPrefix(normalizedValue: string, prefix: string): boole
   return normalizedValue
     .split(' ')
     .some((word) => word.startsWith(normalizedPrefix));
+}
+
+function extractAlphaTransactionRows(
+  text: string,
+  options: Required<
+    Pick<PdfStatementImportOptions, 'defaultCurrency' | 'defaultYear' | 'maxTransactions'>
+  >,
+): AlphaTransactionRow[] {
+  const rows: AlphaTransactionRow[] = [];
+  const period = inferAlphaStatementPeriod(text, options.defaultYear);
+
+  for (const line of statementLines(text)) {
+    if (rows.length >= options.maxTransactions) {
+      break;
+    }
+
+    const row = parseAlphaTransactionLine(line, options, period);
+    if (row) {
+      rows.push(row);
+    }
+  }
+
+  return rows;
+}
+
+function parseAlphaTransactionLine(
+  line: string,
+  options: Pick<PdfStatementImportOptions, 'defaultCurrency' | 'defaultYear'>,
+  period: AlphaStatementPeriod | null,
+): AlphaTransactionRow | null {
+  const match =
+    /^\s*(?<date>\d{1,2}\/\d{1,2})\s+(?<body>.+?)\s+(?<valueDate>\d{1,2}\/\d{1,2}\/(?:\d{2}|19\d{2}|20\d{2}))\s*$/u.exec(
+      line,
+    );
+
+  if (!match?.groups) {
+    return null;
+  }
+
+  const dateMatches = findDates(line, options.defaultYear ?? new Date().getFullYear());
+  const amounts = findAmounts(line, options.defaultCurrency ?? 'EUR').filter(
+    (amount) => !dateMatches.some((date) => spansOverlap(date, amount)),
+  );
+  const amount = amounts.at(-1);
+
+  if (!amount) {
+    return null;
+  }
+
+  const occurredOn = alphaBookingDate(
+    match.groups['date'],
+    match.groups['valueDate'],
+    period,
+    options.defaultYear ?? new Date().getFullYear(),
+  );
+
+  if (!occurredOn) {
+    return null;
+  }
+
+  const rawDescription = line.slice(
+    line.indexOf(match.groups['date']) + match.groups['date'].length,
+    amount.index,
+  );
+  const transactionCode = alphaTransactionCode(rawDescription);
+  const description = buildAlphaDescription(rawDescription);
+
+  return {
+    occurredOn,
+    description,
+    amount,
+    transactionCode,
+    sourceLine: line,
+  };
+}
+
+function inferAlphaStatementPeriod(
+  text: string,
+  defaultYear: number,
+): AlphaStatementPeriod | null {
+  for (const line of statementLines(text)) {
+    const normalized = normalizeForMatching(line);
+    if (!normalized.includes('κινησεις απο') || !normalized.includes('εως')) {
+      continue;
+    }
+
+    const dates = findDates(line, defaultYear).filter((date) =>
+      /\d{4}/u.test(date.raw),
+    );
+    const startDate = dates[0]?.occurredOn;
+    const endDate = dates[1]?.occurredOn;
+
+    if (startDate && endDate) {
+      return { startDate, endDate };
+    }
+  }
+
+  return null;
+}
+
+function alphaBookingDate(
+  bookingDate: string,
+  valueDate: string,
+  period: AlphaStatementPeriod | null,
+  defaultYear: number,
+): string | null {
+  const bookingParts = slashDateParts(bookingDate);
+  if (!bookingParts) {
+    return null;
+  }
+
+  if (period) {
+    const years = uniqueNumbers([
+      Number(period.startDate.slice(0, 4)),
+      Number(period.endDate.slice(0, 4)),
+    ]);
+
+    for (const year of years) {
+      const candidate = localDateKey(year, bookingParts.month, bookingParts.day);
+      if (
+        candidate &&
+        candidate >= period.startDate &&
+        candidate <= period.endDate
+      ) {
+        return candidate;
+      }
+    }
+
+    return localDateKey(
+      Number(period.endDate.slice(0, 4)),
+      bookingParts.month,
+      bookingParts.day,
+    );
+  }
+
+  const valueParts = slashDateParts(valueDate);
+  return localDateKey(
+    valueParts?.year ?? defaultYear,
+    bookingParts.month,
+    bookingParts.day,
+  );
+}
+
+function slashDateParts(
+  value: string,
+): { day: number; month: number; year?: number } | null {
+  const match =
+    /^(?<day>\d{1,2})\/(?<month>\d{1,2})(?:\/(?<year>\d{2}|19\d{2}|20\d{2}))?$/u.exec(
+      value.trim(),
+    );
+
+  if (!match?.groups) {
+    return null;
+  }
+
+  return {
+    day: Number(match.groups['day']),
+    month: Number(match.groups['month']),
+    year: match.groups['year'] ? normalizeYear(match.groups['year']) : undefined,
+  };
+}
+
+function uniqueNumbers(values: number[]): number[] {
+  return values.filter(
+    (value, index) => Number.isFinite(value) && values.indexOf(value) === index,
+  );
+}
+
+function buildAlphaDescription(rawDescription: string): string {
+  const description = rawDescription
+    .replace(/\s{2,}\d{2,4}\b/gu, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '')
+    .trim();
+
+  return (description || 'Imported transaction').slice(0, 120);
+}
+
+function alphaTransactionCode(rawDescription: string): string | null {
+  return /\s{2,}(?<code>\d{2,4})\b/u.exec(rawDescription)?.groups?.['code'] ?? null;
+}
+
+function inferAlphaPaymentMethod(row: AlphaTransactionRow): PaymentMethod {
+  const normalized = normalizeForMatching(row.description);
+
+  if (
+    row.transactionCode === '706' ||
+    normalized.includes('atm') ||
+    normalized.includes('ατμ') ||
+    normalized.includes('αναληψη')
+  ) {
+    return 'cash';
+  }
+
+  if (
+    row.transactionCode === '99' ||
+    normalized.includes('google pay') ||
+    normalized.includes('visa') ||
+    normalized.includes('mastercard')
+  ) {
+    return 'card';
+  }
+
+  return 'bankTransfer';
 }
 
 function extractPiraeusTransactionBlocks(
