@@ -1760,24 +1760,28 @@ export class DashboardComponent {
   private async extractPdfText(file: File): Promise<string> {
     const pdfjs = await import('pdfjs-dist');
     pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-      'pdfjs-dist/build/pdf.worker.mjs',
-      import.meta.url,
+      'assets/pdfjs/pdf.worker.min.mjs',
+      window.document.baseURI,
     ).toString();
 
-    const document = await pdfjs.getDocument({
+    const pdfDocument = await pdfjs.getDocument({
       data: new Uint8Array(await file.arrayBuffer()),
     }).promise;
     const pages: string[] = [];
 
     try {
-      for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-        const page = await document.getPage(pageNumber);
+      for (
+        let pageNumber = 1;
+        pageNumber <= pdfDocument.numPages;
+        pageNumber += 1
+      ) {
+        const page = await pdfDocument.getPage(pageNumber);
         const textContent = await page.getTextContent();
         pages.push(this.pdfTextRows(textContent.items));
         page.cleanup();
       }
     } finally {
-      await document.destroy();
+      await pdfDocument.destroy();
     }
 
     return pages.join('\n');

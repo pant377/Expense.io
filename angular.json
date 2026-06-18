@@ -26,7 +26,12 @@
             "assets": [
               "src/favicon.ico",
               "src/favicon.png",
-              "src/favicon.svg"
+              "src/favicon.svg",
+              {
+                "glob": "pdf.worker.min.mjs",
+                "input": "node_modules/pdfjs-dist/build",
+                "output": "assets/pdfjs"
+              }
             ],
             "styles": [
               "src/styles.css"
@@ -103,7 +108,12 @@
             "assets": [
               "src/favicon.ico",
               "src/favicon.png",
-              "src/favicon.svg"
+              "src/favicon.svg",
+              {
+                "glob": "pdf.worker.min.mjs",
+                "input": "node_modules/pdfjs-dist/build",
+                "output": "assets/pdfjs"
+              }
             ],
             "fileReplacements": [
               {
