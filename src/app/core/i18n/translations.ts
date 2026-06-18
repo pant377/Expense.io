@@ -171,6 +171,10 @@ const EN_TRANSLATIONS = {
   'analytics.chartAria': '{{chart}} for {{period}}',
   'analytics.openChartTransactions': 'Open transactions for {{period}}',
   'analytics.chartTransactions': 'Bar transactions',
+  'analytics.eraseBar': 'Erase this bar',
+  'analytics.erasingBar': 'Erasing...',
+  'analytics.eraseBarConfirmation':
+    'Delete {{count}} transactions from {{period}}? This cannot be undone.',
   'analytics.breakdown': 'Category breakdown',
   'analytics.breakdownDescription': 'Share of selected-period spending.',
   'analytics.incomeBreakdownDescription':
@@ -262,6 +266,12 @@ const EN_TRANSLATIONS = {
   'import.save': 'Import selected',
   'import.saving': 'Importing...',
   'import.success': '{{count}} transactions were imported.',
+  'import.successWithSkipped':
+    '{{count}} transactions were imported. {{skipped}} duplicates were skipped.',
+  'import.duplicatesSkipped':
+    '{{count}} duplicate transactions were skipped.',
+  'import.onlyDuplicates':
+    '{{count}} detected transactions already exist, so nothing new can be imported.',
   'import.empty':
     'No transactions were detected. This works best with text-based bank statements, not scanned images.',
   'import.readError': 'The PDF could not be read. Try another statement file.',
@@ -511,6 +521,10 @@ const EL_TRANSLATIONS: Record<TranslationKey, string> = {
   'analytics.chartAria': '{{chart}} για {{period}}',
   'analytics.openChartTransactions': 'Άνοιγμα συναλλαγών για {{period}}',
   'analytics.chartTransactions': 'Συναλλαγές μπάρας',
+  'analytics.eraseBar': 'Διαγραφή μπάρας',
+  'analytics.erasingBar': 'Διαγραφή...',
+  'analytics.eraseBarConfirmation':
+    'Να διαγραφούν {{count}} συναλλαγές από {{period}}; Αυτή η ενέργεια δεν αναιρείται.',
   'analytics.breakdown': 'Ανάλυση ανά κατηγορία',
   'analytics.breakdownDescription': 'Μερίδιο εξόδων για την επιλεγμένη περίοδο.',
   'analytics.incomeBreakdownDescription':
@@ -602,6 +616,12 @@ const EL_TRANSLATIONS: Record<TranslationKey, string> = {
   'import.save': 'Εισαγωγή επιλεγμένων',
   'import.saving': 'Εισαγωγή...',
   'import.success': 'Εισήχθησαν {{count}} συναλλαγές.',
+  'import.successWithSkipped':
+    'Εισήχθησαν {{count}} συναλλαγές. Παραλείφθηκαν {{skipped}} διπλότυπες.',
+  'import.duplicatesSkipped':
+    'Παραλείφθηκαν {{count}} διπλότυπες συναλλαγές.',
+  'import.onlyDuplicates':
+    'Οι {{count}} συναλλαγές που εντοπίστηκαν υπάρχουν ήδη, οπότε δεν υπάρχει κάτι νέο για εισαγωγή.',
   'import.empty':
     'Δεν εντοπίστηκαν συναλλαγές. Λειτουργεί καλύτερα με κινήσεις τράπεζας που περιέχουν κείμενο, όχι σαρωμένες εικόνες.',
   'import.readError': 'Δεν ήταν δυνατή η ανάγνωση του PDF. Δοκίμασε άλλο αρχείο κίνησης.',

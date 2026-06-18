@@ -181,6 +181,7 @@ export class DashboardComponent {
   readonly isUpdatingExpense = signal(false);
   readonly isReadingStatement = signal(false);
   readonly isSavingStatementImport = signal(false);
+  readonly isErasingChartPoint = signal(false);
   readonly isDeletingAccount = signal(false);
   readonly isResettingExpenses = signal(false);
   readonly recurringActionId = signal<string | null>(null);
@@ -193,6 +194,7 @@ export class DashboardComponent {
   readonly editError = signal('');
   readonly statementImportError = signal('');
   readonly statementImportSuccess = signal('');
+  readonly chartPointDeleteError = signal('');
   readonly recurringError = signal('');
   readonly accountDeleteError = signal('');
   readonly loadError = signal('');
@@ -237,6 +239,7 @@ export class DashboardComponent {
   readonly editExpensePhotoError =
     signal<ExpensePhotoValidationError | null>(null);
   readonly editExpensePhotoRemoved = signal(false);
+  private readonly currentExpenses = signal<Expense[]>([]);
   private readonly expensePhotoUrls = signal<Record<string, string>>({});
   private readonly photoUrlRequests = new Set<string>();
   private activePhotoPaths = new Set<string>();
@@ -397,7 +400,10 @@ export class DashboardComponent {
 
       return combineLatest([
         this.expenseService.watchExpenses(user.uid).pipe(
-          tap((expenses) => this.syncExpensePhotoUrls(expenses)),
+          tap((expenses) => {
+            this.currentExpenses.set(expenses);
+            this.syncExpensePhotoUrls(expenses);
+          }),
         ),
         limits$,
         rates$,
@@ -932,6 +938,22 @@ export class DashboardComponent {
     const selectedDrafts = this.statementImportDrafts().filter(
       (draft) => draft.selected,
     );
+    const existingTransactionKeys = this.existingTransactionDuplicateKeys();
+    const seenImportKeys = new Set<string>();
+    const uniqueDrafts = selectedDrafts.filter((draft) => {
+      const duplicateKey = this.statementDraftDuplicateKey(draft);
+
+      if (
+        existingTransactionKeys.has(duplicateKey) ||
+        seenImportKeys.has(duplicateKey)
+      ) {
+        return false;
+      }
+
+      seenImportKeys.add(duplicateKey);
+      return true;
+    });
+    const duplicateCount = selectedDrafts.length - uniqueDrafts.length;
 
     if (!user) {
       return;
@@ -947,11 +969,18 @@ export class DashboardComponent {
       return;
     }
 
+    if (!uniqueDrafts.length) {
+      this.statementImportError.set(
+        this.t('import.onlyDuplicates', { count: duplicateCount }),
+      );
+      return;
+    }
+
     this.isSavingStatementImport.set(true);
     this.statementImportError.set('');
 
     try {
-      for (const draft of selectedDrafts) {
+      for (const draft of uniqueDrafts) {
         await this.expenseService.addExpense(user.uid, {
           description: draft.description.trim(),
           amountCents: draft.amountCents,
@@ -969,7 +998,12 @@ export class DashboardComponent {
       this.detectedStatementBalance.set(null);
       this.statementImportFileName.set('');
       this.statementImportSuccess.set(
-        this.t('import.success', { count: selectedDrafts.length }),
+        duplicateCount
+          ? this.t('import.successWithSkipped', {
+              count: uniqueDrafts.length,
+              skipped: duplicateCount,
+            })
+          : this.t('import.success', { count: uniqueDrafts.length }),
       );
     } catch (error: unknown) {
       this.statementImportError.set(
@@ -1227,6 +1261,43 @@ export class DashboardComponent {
       window.alert(firebaseErrorMessage(error, this.language.current()));
     } finally {
       this.isResettingExpenses.set(false);
+    }
+  }
+
+  async eraseChartPointTransactions(
+    transactions: readonly Expense[],
+    periodLabel: string,
+  ): Promise<void> {
+    const user = this.authService.currentUser;
+
+    if (!user || !transactions.length) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      this.t('analytics.eraseBarConfirmation', {
+        count: transactions.length,
+        period: periodLabel,
+      }),
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.isErasingChartPoint.set(true);
+    this.chartPointDeleteError.set('');
+
+    try {
+      await this.expenseService.deleteExpenses(user.uid, transactions);
+      this.expensePage.set(1);
+      this.selectedChartPoint.set(null);
+    } catch (error: unknown) {
+      this.chartPointDeleteError.set(
+        firebaseErrorMessage(error, this.language.current()),
+      );
+    } finally {
+      this.isErasingChartPoint.set(false);
     }
   }
 
@@ -1735,13 +1806,35 @@ export class DashboardComponent {
         defaultCurrency: this.spendingLimitForm.controls.baseCurrency.value || 'EUR',
         defaultYear: new Date().getFullYear(),
       });
-      const drafts = statement.transactions.map((draft) => ({
-        ...draft,
-        selected: true,
-      }));
+      const existingTransactionKeys = this.existingTransactionDuplicateKeys();
+      const seenStatementKeys = new Set<string>();
+      let duplicateCount = 0;
+      const drafts: StatementImportReviewItem[] = [];
+
+      for (const draft of statement.transactions) {
+        const duplicateKey = this.statementDraftDuplicateKey(draft);
+
+        if (
+          existingTransactionKeys.has(duplicateKey) ||
+          seenStatementKeys.has(duplicateKey)
+        ) {
+          duplicateCount += 1;
+          continue;
+        }
+
+        seenStatementKeys.add(duplicateKey);
+        drafts.push({
+          ...draft,
+          selected: true,
+        });
+      }
 
       if (!drafts.length) {
-        this.statementImportError.set(this.t('import.empty'));
+        this.statementImportError.set(
+          duplicateCount
+            ? this.t('import.onlyDuplicates', { count: duplicateCount })
+            : this.t('import.empty'),
+        );
         this.statementImportFileName.set('');
         return;
       }
@@ -1749,7 +1842,13 @@ export class DashboardComponent {
       this.statementImportDrafts.set(drafts);
       this.detectedStatementBalance.set(statement.balance);
       this.statementImportOpen.set(true);
-    } catch {
+      if (duplicateCount) {
+        this.statementImportSuccess.set(
+          this.t('import.duplicatesSkipped', { count: duplicateCount }),
+        );
+      }
+    } catch (error: unknown) {
+      console.error('Statement PDF import failed.', error);
       this.statementImportError.set(this.t('import.readError'));
       this.statementImportFileName.set('');
     } finally {
@@ -1760,7 +1859,7 @@ export class DashboardComponent {
   private async extractPdfText(file: File): Promise<string> {
     const pdfjs = await import('pdfjs-dist');
     pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-      'assets/pdfjs/pdf.worker.min.mjs',
+      'build/pdf.worker.mjs',
       window.document.baseURI,
     ).toString();
 
@@ -1848,6 +1947,43 @@ export class DashboardComponent {
       file.type === 'application/pdf' ||
       file.name.toLocaleLowerCase().endsWith('.pdf')
     );
+  }
+
+  private existingTransactionDuplicateKeys(): Set<string> {
+    return new Set(
+      this.currentExpenses().map((expense) =>
+        this.expenseDuplicateKey(expense),
+      ),
+    );
+  }
+
+  private expenseDuplicateKey(expense: Expense): string {
+    return this.transactionDuplicateKey(
+      this.dateInputValue(expense.occurredAt.toDate()),
+      expense.description,
+      expense.amountCents,
+    );
+  }
+
+  private statementDraftDuplicateKey(
+    draft: Pick<
+      PdfStatementTransactionDraft,
+      'occurredOn' | 'description' | 'amountCents'
+    >,
+  ): string {
+    return this.transactionDuplicateKey(
+      draft.occurredOn,
+      draft.description,
+      draft.amountCents,
+    );
+  }
+
+  private transactionDuplicateKey(
+    occurredOn: string,
+    description: string,
+    amountCents: number,
+  ): string {
+    return [occurredOn, description.trim(), amountCents].join('\u001f');
   }
 
   private updateStatementImportDraft(
@@ -1967,11 +2103,15 @@ export class DashboardComponent {
   }
 
   openChartPointTransactions(index: number, label: string): void {
+    this.chartPointDeleteError.set('');
     this.selectedChartPoint.set({ index, label });
   }
 
   closeChartPointTransactions(): void {
-    this.selectedChartPoint.set(null);
+    if (!this.isErasingChartPoint()) {
+      this.chartPointDeleteError.set('');
+      this.selectedChartPoint.set(null);
+    }
   }
 
   getChartPointTransactions(

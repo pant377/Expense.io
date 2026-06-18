@@ -960,6 +960,17 @@ app-dashboard .expense-photo-link:hover {
   border-color: #bad8d3;
 }
 
+.erase-bar-button {
+  color: #9a3d3d;
+  background: #fff0ef;
+  border-color: #f1c7c3;
+}
+
+.erase-bar-button:hover:not(:disabled) {
+  background: #ffe3e0;
+  border-color: #e8aaa3;
+}
+
 .activity-tool-button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
@@ -994,6 +1005,12 @@ app-dashboard .expense-item-actions {
 
 app-dashboard .expense-copy {
   gap: 0.45rem;
+}
+
+app-dashboard .chart-point-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.85rem;
 }
 
 app-dashboard .transaction-metadata {
@@ -1951,6 +1968,17 @@ app-dashboard .expense-item.income-transaction:hover {
 :root[data-theme="dark"] .activity-tool-button:hover:not(:disabled) {
   background: #1c4846;
   border-color: #3d716d;
+}
+
+:root[data-theme="dark"] .erase-bar-button {
+  color: #ffaea6;
+  background: #3a1f22;
+  border-color: #6b373a;
+}
+
+:root[data-theme="dark"] .erase-bar-button:hover:not(:disabled) {
+  background: #4a272b;
+  border-color: #855055;
 }
 
 :root[data-theme="dark"] .edit-expense-button:hover {

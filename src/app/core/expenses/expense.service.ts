@@ -9,6 +9,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import { Observable } from 'rxjs';
 
@@ -97,6 +98,35 @@ export class ExpenseService {
     if (photoStoragePath) {
       await this.expensePhotoService.delete(photoStoragePath).catch(() => undefined);
     }
+  }
+
+  async deleteExpenses(
+    userId: string,
+    expenses: readonly Expense[],
+  ): Promise<void> {
+    const batchSize = 450;
+
+    for (let index = 0; index < expenses.length; index += batchSize) {
+      const batch = writeBatch(firestore);
+
+      for (const expense of expenses.slice(index, index + batchSize)) {
+        batch.delete(doc(firestore, `users/${userId}/expenses/${expense.id}`));
+      }
+
+      await batch.commit();
+    }
+
+    await Promise.all(
+      expenses
+        .map((expense) => expense.photoStoragePath)
+        .filter(
+          (path): path is string =>
+            typeof path === 'string' && path.length > 0,
+        )
+        .map((path) =>
+          this.expensePhotoService.delete(path).catch(() => undefined),
+        ),
+    );
   }
 
   async updateExpense(
