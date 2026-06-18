@@ -43,6 +43,7 @@ import {
   availableTransactionYears,
   buildExpenseAnalytics,
 } from '../../core/expenses/expense-analytics';
+import { AnalyticsPreferencesService } from '../../core/expenses/analytics-preferences.service';
 import {
   EXPENSE_CATEGORIES,
   PAYMENT_METHODS,
@@ -152,6 +153,9 @@ export class DashboardComponent {
   private readonly expensePhotoService = inject(ExpensePhotoService);
   private readonly recurringExpenseService = inject(RecurringExpenseService);
   private readonly spendingLimitService = inject(SpendingLimitService);
+  private readonly analyticsPreferencesService = inject(
+    AnalyticsPreferencesService,
+  );
   private readonly customCategoryService = inject(CustomCategoryService);
   private readonly currencyService = inject(CurrencyService);
   private readonly router = inject(Router);
@@ -220,13 +224,9 @@ export class DashboardComponent {
   readonly expenseListFilters = signal<ExpenseListFilters>({
     ...EMPTY_EXPENSE_LIST_FILTERS,
   });
-  readonly analyticsFilters = signal<AnalyticsFilters>({
-    mode: 'month',
-    year: new Date().getFullYear(),
-    month: new Date().getMonth(),
-    category: 'All',
-    transactionType: 'expense',
-  });
+  readonly analyticsFilters = signal<AnalyticsFilters>(
+    this.defaultAnalyticsFilters(),
+  );
   readonly breakdownView = signal<'bars' | 'pie'>('bars');
   readonly selectedBreakdownCategory = signal<ExpenseCategory | null>(null);
   readonly selectedChartPoint = signal<ChartPointSelection | null>(null);
@@ -341,6 +341,7 @@ export class DashboardComponent {
   private readonly expenseViewModel$ = this.authService.user$.pipe(
     switchMap((user) => {
       if (!user) {
+        this.analyticsFilters.set(this.defaultAnalyticsFilters());
         return of(null);
       }
 
@@ -398,6 +399,18 @@ export class DashboardComponent {
           catchError(() => of([] as string[])),
         );
 
+      const analyticsPreferences$ = this.analyticsPreferencesService
+        .watchPreferences(user.uid, this.defaultAnalyticsFilters())
+        .pipe(
+          tap((filters) => this.analyticsFilters.set(filters)),
+          catchError((error: unknown) => {
+            this.loadError.set(
+              firebaseErrorMessage(error, this.language.current()),
+            );
+            return of(this.analyticsFilters());
+          }),
+        );
+
       return combineLatest([
         this.expenseService.watchExpenses(user.uid).pipe(
           tap((expenses) => {
@@ -410,8 +423,16 @@ export class DashboardComponent {
         balanceBaseline$,
         recurringSchedules$,
         customCategories$,
+        analyticsPreferences$,
       ]).pipe(
-        map(([expenses, limits, rates, balanceBaseline, recurringSchedules, customCategories]) => {
+        map(([
+          expenses,
+          limits,
+          rates,
+          balanceBaseline,
+          recurringSchedules,
+          customCategories,
+        ]) => {
           const baseCurrency = limits.baseCurrency || 'EUR';
 
           const totalExpenseCents = expenses.reduce((sum, exp) => 
@@ -1015,32 +1036,26 @@ export class DashboardComponent {
   }
 
   updateAnalyticsMode(mode: AnalyticsMode): void {
-    this.analyticsFilters.update((filters) => ({ ...filters, mode }));
+    this.updateAndSaveAnalyticsFilters({ mode });
   }
 
   updateAnalyticsTransactionType(
     transactionType: AnalyticsTransactionType,
   ): void {
-    this.analyticsFilters.update((filters) => ({
-      ...filters,
-      transactionType,
-    }));
+    this.updateAndSaveAnalyticsFilters({ transactionType });
     this.hoveredPieCategory.set(null);
   }
 
   updateAnalyticsYear(value: string): void {
-    this.analyticsFilters.update((filters) => ({ ...filters, year: Number(value) }));
+    this.updateAndSaveAnalyticsFilters({ year: Number(value) });
   }
 
   updateAnalyticsMonth(value: string): void {
-    this.analyticsFilters.update((filters) => ({ ...filters, month: Number(value) }));
+    this.updateAndSaveAnalyticsFilters({ month: Number(value) });
   }
 
   updateAnalyticsCategory(value: string): void {
-    this.analyticsFilters.update((filters) => ({
-      ...filters,
-      category: value as AnalyticsCategory,
-    }));
+    this.updateAndSaveAnalyticsFilters({ category: value as AnalyticsCategory });
   }
 
   updateBreakdownView(view: 'bars' | 'pie'): void {
@@ -1578,6 +1593,18 @@ export class DashboardComponent {
     return this.language.t(key, parameters);
   }
 
+  private defaultAnalyticsFilters(): AnalyticsFilters {
+    const now = new Date();
+
+    return {
+      mode: 'month',
+      year: now.getFullYear(),
+      month: now.getMonth(),
+      category: 'All',
+      transactionType: 'expense',
+    };
+  }
+
   currencySymbol(code: string): string {
     switch (code) {
       case 'EUR':
@@ -2039,6 +2066,34 @@ export class DashboardComponent {
       ...update,
     }));
     this.expensePage.set(1);
+  }
+
+  private updateAndSaveAnalyticsFilters(
+    update: Partial<AnalyticsFilters>,
+  ): void {
+    const filters = {
+      ...this.analyticsFilters(),
+      ...update,
+    };
+
+    this.analyticsFilters.set(filters);
+    this.saveAnalyticsPreferences(filters);
+  }
+
+  private saveAnalyticsPreferences(filters: AnalyticsFilters): void {
+    const user = this.authService.currentUser;
+
+    if (!user) {
+      return;
+    }
+
+    void this.analyticsPreferencesService
+      .savePreferences(user.uid, filters)
+      .catch((error: unknown) => {
+        this.loadError.set(
+          firebaseErrorMessage(error, this.language.current()),
+        );
+      });
   }
 
   private recurringSyncInFlight = false;

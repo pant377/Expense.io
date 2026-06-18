@@ -42,6 +42,9 @@ export class AccountService {
       doc(firestore, `users/${userId}/settings/spending-limits`),
     );
     finalBatch.delete(
+      doc(firestore, `users/${userId}/settings/analytics-preferences`),
+    );
+    finalBatch.delete(
       doc(firestore, `users/${userId}/settings/custom-categories`),
     );
     finalBatch.delete(

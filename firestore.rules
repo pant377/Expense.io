@@ -189,6 +189,37 @@ service cloud.firestore {
         && request.resource.data.updatedAt is timestamp;
     }
 
+    function validAnalyticsPreferences() {
+      return request.resource.data.keys().hasOnly([
+          'mode',
+          'year',
+          'month',
+          'category',
+          'transactionType',
+          'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'mode',
+          'year',
+          'month',
+          'category',
+          'transactionType',
+          'updatedAt'
+        ])
+        && request.resource.data.mode in ['month', 'year']
+        && request.resource.data.year is int
+        && request.resource.data.year >= 1900
+        && request.resource.data.year <= 2200
+        && request.resource.data.month is int
+        && request.resource.data.month >= 0
+        && request.resource.data.month <= 11
+        && request.resource.data.category is string
+        && request.resource.data.category.size() > 0
+        && request.resource.data.category.size() <= 50
+        && request.resource.data.transactionType in ['expense', 'income', 'merged']
+        && request.resource.data.updatedAt is timestamp;
+    }
+
     function validRecurringExpense() {
       return request.resource.data.keys().hasOnly([
           'description',
@@ -267,6 +298,12 @@ service cloud.firestore {
       match /settings/spending-limits {
         allow read: if signedInAs(userId);
         allow create, update: if signedInAs(userId) && validSpendingLimits();
+        allow delete: if signedInAs(userId);
+      }
+
+      match /settings/analytics-preferences {
+        allow read: if signedInAs(userId);
+        allow create, update: if signedInAs(userId) && validAnalyticsPreferences();
         allow delete: if signedInAs(userId);
       }
 
