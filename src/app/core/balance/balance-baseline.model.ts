@@ -2,7 +2,12 @@ import { Expense } from '../expenses/expense.model';
 import { convertCurrency } from '../limits/spending-limit.model';
 
 export type BalanceBaselineSource = 'manual' | 'statement';
-export type BalanceInstitution = 'alpha' | 'eurobank' | 'piraeus' | 'unknown';
+export type BalanceInstitution =
+  | 'alpha'
+  | 'ethniki'
+  | 'eurobank'
+  | 'piraeus'
+  | 'unknown';
 
 export interface BalanceBaseline {
   amountCents: number | null;

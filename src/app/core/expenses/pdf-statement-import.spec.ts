@@ -301,6 +301,54 @@ describe('PDF statement import', () => {
     );
   });
 
+  it('parses Ethniki signed transaction rows and their running balance', () => {
+    const result = parsePdfStatement(
+      [
+        'SWIFT BIC: ETHNGRAA',
+        '30  12    29  12 23             CARD SHOP                    -8,38       3.540,21',
+        '03  01    03  01 24             PAYROLL                    +813,33       4.353,54',
+        '07  01    07  01 24             BANK TRANSFER                15,00       4.368,54',
+        '10  01    09  01 24             REPEATED CARD               -10,00       4.358,54',
+        '10  01    09  01 24             REPEATED CARD               -10,00       4.348,54',
+      ].join('\n'),
+      { defaultCurrency: 'EUR', defaultYear: 2026 },
+    );
+
+    expect(result.transactions.length).toBe(5);
+    expect(result.transactions[0]).toEqual(
+      jasmine.objectContaining({
+        occurredOn: '2023-12-30',
+        description: 'CARD SHOP',
+        amountCents: 838,
+        transactionType: 'expense',
+        paymentMethod: 'card',
+      }),
+    );
+    expect(result.transactions[1]).toEqual(
+      jasmine.objectContaining({
+        occurredOn: '2024-01-03',
+        amountCents: 81333,
+        transactionType: 'income',
+      }),
+    );
+    expect(result.transactions[2]).toEqual(
+      jasmine.objectContaining({
+        amountCents: 1500,
+        transactionType: 'income',
+      }),
+    );
+    expect(result.transactions[3].description).toBe('REPEATED CARD');
+    expect(result.transactions[4].description).toBe('REPEATED CARD');
+    expect(result.balance).toEqual(
+      jasmine.objectContaining({
+        amountCents: 434854,
+        currency: 'EUR',
+        effectiveDate: '2024-01-10',
+        institution: 'ethniki',
+      }),
+    );
+  });
+
   it('parses Piraeus card-purchase blocks using the merchant detail line', () => {
     const transactions = parsePdfStatementTransactions(
       [

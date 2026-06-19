@@ -27,7 +27,7 @@ export interface PdfStatementBalanceSnapshot {
   amountCents: number;
   currency: string;
   effectiveDate: string;
-  institution: 'alpha' | 'eurobank' | 'piraeus' | 'unknown';
+  institution: 'alpha' | 'ethniki' | 'eurobank' | 'piraeus' | 'unknown';
   sourceLine: string;
 }
 
@@ -72,7 +72,15 @@ interface AlphaTransactionRow {
   sourceLine: string;
 }
 
-type StatementVariant = 'alpha' | 'generic' | 'piraeus';
+interface EthnikiTransactionRow {
+  occurredOn: string;
+  description: string;
+  amount: AmountCandidate;
+  balance: AmountCandidate;
+  sourceLine: string;
+}
+
+type StatementVariant = 'alpha' | 'ethniki' | 'generic' | 'piraeus';
 
 const SUPPORTED_CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD'];
 const CURRENCY_PATTERN = '(?:EUR|USD|GBP|CHF|JPY|CAD|AUD|€|\\$|£|¥)';
@@ -82,7 +90,7 @@ const MONEY_PATTERN = new RegExp(
     '\\s*',
     '(?<openParen>\\()?',
     '\\s*',
-    '(?<sign>[+-])?',
+    '(?<sign>[+\u2212-])?',
     '\\s*',
     '(?<number>(?:\\d{1,3}(?:[., ]\\d{3})+|\\d+)[.,]\\d{2})',
     '\\s*',
@@ -279,6 +287,9 @@ const CATEGORY_KEYWORDS: readonly {
 const PIRAEUS_MAIN_LINE_PATTERN =
   /^\s*(?:(?<date>\d{2}\/\d{2}\/\d{2})\s+\k<date>\s+)?(?<code>\d{4}\s+[A-Z0-9]{4,6}\s+\d{7})\s+\k<code>\b/u;
 
+const ETHNIKI_TRANSACTION_LINE_PATTERN =
+  /^\s*(?<bookingDay>\d{1,2})\s+(?<bookingMonth>\d{1,2})\s+(?<valueDay>\d{1,2})\s+(?<valueMonth>\d{1,2})\s+(?<valueYear>\d{2}|19\d{2}|20\d{2})\b/u;
+
 const PIRAEUS_MONTH_LABELS = [
   ['ιανουαριου', '\u0399\u0391\u039d\u039f\u03a5\u0391\u03a1\u0399\u039f\u03a5'],
   ['φεβρουαριου', '\u03a6\u0395\u0392\u03a1\u039f\u03a5\u0391\u03a1\u0399\u039f\u03a5'],
@@ -309,6 +320,13 @@ export function parsePdfStatementTransactions(
     return parseAlphaStatementTransactions(text, {
       defaultCurrency,
       defaultYear,
+      maxTransactions,
+    });
+  }
+
+  if (variant === 'ethniki') {
+    return parseEthnikiStatementTransactions(text, {
+      defaultCurrency,
       maxTransactions,
     });
   }
@@ -411,6 +429,13 @@ function detectStatementBalance(
   const fallbackDate = latestTransactionDate(transactions);
   const institution = detectStatementInstitution(text, options.variant);
 
+  if (options.variant === 'ethniki') {
+    return detectEthnikiBalance(text, transactions, {
+      defaultCurrency: options.defaultCurrency,
+      institution,
+    });
+  }
+
   for (const line of statementLines(text)) {
     const normalized = normalizeForMatching(line);
 
@@ -466,6 +491,66 @@ function detectStatementBalance(
   }
 
   return candidates.at(-1) ?? null;
+}
+
+function parseEthnikiStatementTransactions(
+  text: string,
+  options: Required<
+    Pick<PdfStatementImportOptions, 'defaultCurrency' | 'maxTransactions'>
+  >,
+): PdfStatementTransactionDraft[] {
+  return extractEthnikiTransactionRows(text, options).map((row, index) => {
+    const transactionType: TransactionType =
+      row.amount.explicitSign < 0 ? 'expense' : 'income';
+    const duplicateKey = [
+      row.occurredOn,
+      row.amount.amountCents,
+      transactionType,
+      normalizeForMatching(row.description),
+      row.balance.amountCents,
+      row.balance.explicitSign,
+    ].join('|');
+
+    return {
+      importId: `${index}-${stableHash(duplicateKey)}`,
+      description: row.description,
+      amountCents: row.amount.amountCents,
+      category: inferCategory(row.description),
+      transactionType,
+      paymentMethod: inferPaymentMethod(row.description),
+      currency: row.amount.currency,
+      occurredOn: row.occurredOn,
+      sourceLine: row.sourceLine.slice(0, 400),
+    };
+  });
+}
+
+function detectEthnikiBalance(
+  text: string,
+  transactions: PdfStatementTransactionDraft[],
+  options: {
+    defaultCurrency: string;
+    institution: PdfStatementBalanceSnapshot['institution'];
+  },
+): PdfStatementBalanceSnapshot | null {
+  const rows = extractEthnikiTransactionRows(text, {
+    defaultCurrency: options.defaultCurrency,
+    maxTransactions: Number.MAX_SAFE_INTEGER,
+  });
+  const lastRow = rows.at(-1);
+
+  if (!lastRow) {
+    return null;
+  }
+
+  return {
+    amountCents: signedAmountCents(lastRow.balance),
+    currency: lastRow.balance.currency,
+    effectiveDate:
+      transactions.at(-1)?.occurredOn ?? lastRow.occurredOn,
+    institution: options.institution,
+    sourceLine: lastRow.sourceLine.slice(0, 400),
+  };
 }
 
 function parseAlphaStatementTransactions(
@@ -632,7 +717,7 @@ function findAmounts(line: string, defaultCurrency: string): AmountCandidate[] {
     const isParenthesized = Boolean(groups['openParen'] && groups['closeParen']);
     const explicitSign = isParenthesized
       ? -1
-      : sign === '-'
+      : sign === '-' || sign === '\u2212'
         ? -1
         : sign === '+'
           ? 1
@@ -873,6 +958,15 @@ function inferStatementYear(text: string): number | null {
 function detectStatementVariant(text: string): StatementVariant {
   const lines = statementLines(text).slice(0, 120);
   const normalizedHeader = normalizeForMatching(lines.join(' '));
+  const hasEthnikiHeader =
+    normalizedHeader.includes('ethngraa') ||
+    normalizedHeader.includes('national bank of greece') ||
+    normalizedHeader.includes('\u03b5\u03b8\u03bd\u03b9\u03ba\u03b7');
+
+  if (hasEthnikiHeader) {
+    return 'ethniki';
+  }
+
   const hasAlphaHeader =
     normalizedHeader.includes('alpha') &&
     (
@@ -909,6 +1003,10 @@ function detectStatementInstitution(
 ): PdfStatementBalanceSnapshot['institution'] {
   if (variant === 'alpha') {
     return 'alpha';
+  }
+
+  if (variant === 'ethniki') {
+    return 'ethniki';
   }
 
   if (variant === 'piraeus') {
@@ -1056,6 +1154,67 @@ function hasNormalizedWordPrefix(normalizedValue: string, prefix: string): boole
   return normalizedValue
     .split(' ')
     .some((word) => word.startsWith(normalizedPrefix));
+}
+
+function extractEthnikiTransactionRows(
+  text: string,
+  options: Required<
+    Pick<PdfStatementImportOptions, 'defaultCurrency' | 'maxTransactions'>
+  >,
+): EthnikiTransactionRow[] {
+  const rows: EthnikiTransactionRow[] = [];
+
+  for (const line of statementLines(text)) {
+    if (rows.length >= options.maxTransactions) {
+      break;
+    }
+
+    const match = ETHNIKI_TRANSACTION_LINE_PATTERN.exec(line);
+    const groups = match?.groups ?? {};
+    if (!match) {
+      continue;
+    }
+
+    const bookingDay = Number(groups['bookingDay']);
+    const bookingMonth = Number(groups['bookingMonth']);
+    const valueMonth = Number(groups['valueMonth']);
+    const valueYear = normalizeYear(groups['valueYear'] ?? '');
+    const bookingYear =
+      bookingMonth === 1 && valueMonth === 12
+        ? valueYear + 1
+        : bookingMonth === 12 && valueMonth === 1
+          ? valueYear - 1
+          : valueYear;
+    const occurredOn = localDateKey(bookingYear, bookingMonth, bookingDay);
+    if (!occurredOn) {
+      continue;
+    }
+
+    const amounts = findAmounts(line, options.defaultCurrency);
+    const amount = amounts.at(-2);
+    const balance = amounts.at(-1);
+    if (!amount || !balance) {
+      continue;
+    }
+
+    const description = line
+      .slice(match[0].length, amount.index)
+      .replace(/[|\u2022]+/gu, ' ')
+      .replace(/(?:^|\s)\/(?=\s|$)/gu, ' ')
+      .replace(/\s{2,}/gu, ' ')
+      .replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '')
+      .trim();
+
+    rows.push({
+      occurredOn,
+      description: (description || 'Imported transaction').slice(0, 120),
+      amount,
+      balance,
+      sourceLine: line,
+    });
+  }
+
+  return rows;
 }
 
 function extractAlphaTransactionRows(

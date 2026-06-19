@@ -184,7 +184,7 @@ service cloud.firestore {
         && request.resource.data.source in ['manual', 'statement']
         && (
           request.resource.data.institution == null
-          || request.resource.data.institution in ['alpha', 'eurobank', 'piraeus', 'unknown']
+          || request.resource.data.institution in ['alpha', 'ethniki', 'eurobank', 'piraeus', 'unknown']
         )
         && request.resource.data.updatedAt is timestamp;
     }

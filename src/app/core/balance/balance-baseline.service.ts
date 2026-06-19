@@ -94,6 +94,7 @@ function isBalanceBaselineSource(value: unknown): value is BalanceBaselineSource
 function isBalanceInstitution(value: unknown): value is BalanceInstitution {
   return (
     value === 'alpha' ||
+    value === 'ethniki' ||
     value === 'eurobank' ||
     value === 'piraeus' ||
     value === 'unknown'

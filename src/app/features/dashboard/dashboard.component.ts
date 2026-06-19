@@ -959,20 +959,14 @@ export class DashboardComponent {
     const selectedDrafts = this.statementImportDrafts().filter(
       (draft) => draft.selected,
     );
-    const existingTransactionKeys = this.existingTransactionDuplicateKeys();
-    const seenImportKeys = new Set<string>();
+    const existingTransactionCounts = this.existingTransactionDuplicateCounts();
     const uniqueDrafts = selectedDrafts.filter((draft) => {
       const duplicateKey = this.statementDraftDuplicateKey(draft);
 
-      if (
-        existingTransactionKeys.has(duplicateKey) ||
-        seenImportKeys.has(duplicateKey)
-      ) {
-        return false;
-      }
-
-      seenImportKeys.add(duplicateKey);
-      return true;
+      return !this.consumeExistingTransactionDuplicate(
+        existingTransactionCounts,
+        duplicateKey,
+      );
     });
     const duplicateCount = selectedDrafts.length - uniqueDrafts.length;
 
@@ -1833,8 +1827,8 @@ export class DashboardComponent {
         defaultCurrency: this.spendingLimitForm.controls.baseCurrency.value || 'EUR',
         defaultYear: new Date().getFullYear(),
       });
-      const existingTransactionKeys = this.existingTransactionDuplicateKeys();
-      const seenStatementKeys = new Set<string>();
+      const existingTransactionCounts =
+        this.existingTransactionDuplicateCounts();
       let duplicateCount = 0;
       const drafts: StatementImportReviewItem[] = [];
 
@@ -1842,14 +1836,15 @@ export class DashboardComponent {
         const duplicateKey = this.statementDraftDuplicateKey(draft);
 
         if (
-          existingTransactionKeys.has(duplicateKey) ||
-          seenStatementKeys.has(duplicateKey)
+          this.consumeExistingTransactionDuplicate(
+            existingTransactionCounts,
+            duplicateKey,
+          )
         ) {
           duplicateCount += 1;
           continue;
         }
 
-        seenStatementKeys.add(duplicateKey);
         drafts.push({
           ...draft,
           selected: true,
@@ -1976,12 +1971,29 @@ export class DashboardComponent {
     );
   }
 
-  private existingTransactionDuplicateKeys(): Set<string> {
-    return new Set(
-      this.currentExpenses().map((expense) =>
-        this.expenseDuplicateKey(expense),
-      ),
-    );
+  private existingTransactionDuplicateCounts(): Map<string, number> {
+    const counts = new Map<string, number>();
+
+    for (const expense of this.currentExpenses()) {
+      const key = this.expenseDuplicateKey(expense);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+
+    return counts;
+  }
+
+  private consumeExistingTransactionDuplicate(
+    counts: Map<string, number>,
+    key: string,
+  ): boolean {
+    const count = counts.get(key) ?? 0;
+
+    if (count <= 0) {
+      return false;
+    }
+
+    counts.set(key, count - 1);
+    return true;
   }
 
   private expenseDuplicateKey(expense: Expense): string {
