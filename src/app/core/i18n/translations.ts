@@ -252,7 +252,7 @@ const EN_TRANSLATIONS = {
   'expense.rowsPerPage': 'Rows:',
   'import.pdf': 'Import PDF',
   'import.supportedBanks':
-    'Supports Eurobank, Piraeus Bank and Alpha Bank e-statements for now.',
+    'Supports: Eurobank, Piraeus, Alpha Bank and Ethniki e-statements for now.',
   'import.reading': 'Reading...',
   'import.eyebrow': 'Statement import',
   'import.title': 'Review detected transactions',
@@ -602,7 +602,7 @@ const EL_TRANSLATIONS: Record<TranslationKey, string> = {
   'expense.rowsPerPage': 'Γραμμές:',
   'import.pdf': 'Εισαγωγή PDF',
   'import.supportedBanks':
-    'Υποστηρίζονται προς το παρόν e-statements Eurobank, Τράπεζας Πειραιώς και Alpha Bank.',
+    'Υποστηρίζονται προς το παρόν e-statements Eurobank, Τράπεζας Πειραιώς, Alpha Bank και Ethniki .',
   'import.reading': 'Ανάγνωση...',
   'import.eyebrow': 'Εισαγωγή κίνησης',
   'import.title': 'Έλεγχος συναλλαγών που εντοπίστηκαν',
