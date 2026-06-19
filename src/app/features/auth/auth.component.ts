@@ -13,11 +13,16 @@ import { firebaseErrorMessage } from '../../core/errors/firebase-error';
 import { LanguageService } from '../../core/i18n/language.service';
 import { LanguageToggleComponent } from '../../core/i18n/language-toggle.component';
 import { TranslationKey } from '../../core/i18n/translations';
+import { DismissibleMessageComponent } from '../../core/messages/dismissible-message.component';
 import { ThemeService } from '../../core/theme/theme.service';
 
 @Component({
   selector: 'app-auth',
-  imports: [ReactiveFormsModule, LanguageToggleComponent],
+  imports: [
+    ReactiveFormsModule,
+    DismissibleMessageComponent,
+    LanguageToggleComponent,
+  ],
   templateUrl: './auth.component.html',
   styleUrl: './auth.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

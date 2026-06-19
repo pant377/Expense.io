@@ -185,6 +185,10 @@ a {
 }
 
 .error-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin: 0;
   padding: 0.75rem 0.9rem;
   color: #922f2f;
   background: #fff0ef;
@@ -598,6 +602,9 @@ a {
 }
 
 .success-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
   margin: 0;
   padding: 0.75rem 0.9rem;
   color: #075e58;
@@ -605,6 +612,38 @@ a {
   border: 1px solid #b9e2d9;
   border-radius: 10px;
   font-size: 0.9rem;
+}
+
+.message-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.message-dismiss {
+  display: grid;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  color: currentColor;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.message-dismiss:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.message-dismiss:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 
 .danger-zone {
@@ -693,20 +732,6 @@ app-dashboard
   .transaction-tabs
   button.active {
   color: #087168;
-}
-
-app-dashboard
-  .analytics-card[data-transaction-type="income"]
-  .analytics-stats
-  .change-up {
-  color: var(--primary);
-}
-
-app-dashboard
-  .analytics-card[data-transaction-type="income"]
-  .analytics-stats
-  .change-down {
-  color: var(--danger);
 }
 
 app-dashboard .merged-track {
@@ -1894,12 +1919,16 @@ app-dashboard .expense-item.income-transaction:hover {
   color: #edf5f7;
 }
 
-:root[data-theme="dark"] .analytics-card .analytics-stats .change-up {
+:root[data-theme="dark"] .analytics-card .analytics-stats .change-positive {
+  color: #51cfc2;
+}
+
+:root[data-theme="dark"] .analytics-card .analytics-stats .change-negative {
   color: #f1ad6b;
 }
 
-:root[data-theme="dark"] .analytics-card .analytics-stats .change-down {
-  color: #51cfc2;
+:root[data-theme="dark"] .analytics-card .analytics-stats .change-caution {
+  color: #f4c66a;
 }
 
 :root[data-theme="dark"] .activity-card .expense-list-filters {

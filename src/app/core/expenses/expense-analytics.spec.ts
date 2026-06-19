@@ -74,6 +74,30 @@ describe('expense analytics', () => {
     expect(analytics.points[5].amountCents).toBe(0);
   });
 
+  it('compares a running year only through the latest recorded date', () => {
+    const analytics = buildExpenseAnalytics(
+      [
+        expense('current', 1000, 'Food', '2026-05-15'),
+        expense('previous-in-range', 2000, 'Food', '2025-05-15'),
+        expense('previous-after-cutoff', 3000, 'Food', '2025-05-16'),
+      ],
+      {
+        mode: 'year',
+        year: 2026,
+        month: 0,
+        category: 'All',
+        transactionType: 'expense',
+      },
+      'EUR',
+      { EUR: 1 },
+      'en-GB',
+      new Date(2026, 5, 19),
+    );
+
+    expect(analytics.previousTotalCents).toBe(2000);
+    expect(analytics.changePercent).toBe(-50);
+  });
+
   it('returns sorted available years including the current year', () => {
     expect(availableTransactionYears(expenses, 'expense', 2026)).toEqual([
       2026,
@@ -113,6 +137,10 @@ describe('expense analytics', () => {
     expect(analytics.incomeCents).toBe(0);
     expect(analytics.expenseCents).toBe(5000);
     expect(analytics.totalCents).toBe(-5000);
+    expect(analytics.previousTotalCents).toBe(-1500);
+    expect(analytics.changePercent).toBe(-233);
+    expect(analytics.incomeChangePercent).toBe(0);
+    expect(analytics.expenseChangePercent).toBe(233);
     expect(analytics.count).toBe(3);
     expect(analytics.averageCents).toBe(0);
     expect(analytics.topCategory).toBeNull();
@@ -140,6 +168,7 @@ describe('expense analytics', () => {
     expect(analytics.incomeCents).toBe(5000);
     expect(analytics.expenseCents).toBe(2000);
     expect(analytics.totalCents).toBe(3000);
+    expect(analytics.changePercent).toBe(200);
     expect(analytics.points[1].amountCents).toBe(3800);
     expect(analytics.points[14].amountCents).toBe(-800);
   });

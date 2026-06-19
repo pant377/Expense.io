@@ -156,11 +156,20 @@
       </div>
 
       @if (errorMessage()) {
-        <p class="error-message" role="alert">{{ errorMessage() }}</p>
+        <app-dismissible-message
+          [message]="errorMessage()"
+          [dismissLabel]="t('common.dismissMessage')"
+          (dismissed)="errorMessage.set('')"
+        />
       }
 
       @if (successMessage()) {
-        <p class="success-message" role="status">{{ successMessage() }}</p>
+        <app-dismissible-message
+          type="success"
+          [message]="successMessage()"
+          [dismissLabel]="t('common.dismissMessage')"
+          (dismissed)="successMessage.set('')"
+        />
       }
 
       <button class="button button-primary submit-button" type="submit" [disabled]="isSubmitting()">

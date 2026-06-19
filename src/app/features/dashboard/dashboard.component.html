@@ -144,11 +144,20 @@
           <p class="expense-import-support">{{ t('import.supportedBanks') }}</p>
 
           @if (statementImportError() && !statementImportOpen()) {
-            <p class="error-message" role="alert">{{ statementImportError() }}</p>
+            <app-dismissible-message
+              [message]="statementImportError()"
+              [dismissLabel]="t('common.dismissMessage')"
+              (dismissed)="statementImportError.set('')"
+            />
           }
 
           @if (statementImportSuccess()) {
-            <p class="success-message" role="status">{{ statementImportSuccess() }}</p>
+            <app-dismissible-message
+              type="success"
+              [message]="statementImportSuccess()"
+              [dismissLabel]="t('common.dismissMessage')"
+              (dismissed)="statementImportSuccess.set('')"
+            />
           }
 
           <form [formGroup]="expenseForm" (ngSubmit)="addExpense()">
@@ -434,7 +443,11 @@
             }
 
             @if (actionError()) {
-              <p class="error-message" role="alert">{{ actionError() }}</p>
+              <app-dismissible-message
+                [message]="actionError()"
+                [dismissLabel]="t('common.dismissMessage')"
+                (dismissed)="actionError.set('')"
+              />
             }
 
             <button class="button button-primary add-button" type="submit" [disabled]="isSaving()">
@@ -733,7 +746,21 @@
                     | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
                 }}
               </strong>
-              <small>{{ t('analytics.incomeMinusExpenses') }}</small>
+              @if (vm.analytics.changePercent === null) {
+                <small>{{ t('analytics.noPreviousBalance') }}</small>
+              } @else {
+                <small
+                  [class.change-positive]="vm.analytics.changePercent > 0"
+                  [class.change-negative]="vm.analytics.changePercent < 0"
+                >
+                  {{ vm.analytics.changePercent > 0 ? '+' : '' }}{{ vm.analytics.changePercent }}%
+                  {{
+                    t('analytics.vsPrevious', {
+                      period: analyticsComparisonPeriod(vm.analyticsFilters),
+                    })
+                  }}
+                </small>
+              }
             </article>
             <article>
               <span>{{ t('analytics.totalIncome') }}</span>
@@ -743,7 +770,21 @@
                     | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
                 }}
               </strong>
-              <small>{{ t('analytics.selectedPeriod') }}</small>
+              @if (vm.analytics.incomeChangePercent === null) {
+                <small>{{ t('analytics.noPreviousIncome') }}</small>
+              } @else {
+                <small
+                  [class.change-positive]="vm.analytics.incomeChangePercent > 0"
+                  [class.change-caution]="vm.analytics.incomeChangePercent < 0"
+                >
+                  {{ vm.analytics.incomeChangePercent > 0 ? '+' : '' }}{{ vm.analytics.incomeChangePercent }}%
+                  {{
+                    t('analytics.vsPrevious', {
+                      period: analyticsComparisonPeriod(vm.analyticsFilters),
+                    })
+                  }}
+                </small>
+              }
             </article>
             <article>
               <span>{{ t('analytics.totalSpent') }}</span>
@@ -753,7 +794,21 @@
                     | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()
                 }}
               </strong>
-              <small>{{ t('analytics.selectedPeriod') }}</small>
+              @if (vm.analytics.expenseChangePercent === null) {
+                <small>{{ t('analytics.noPrevious') }}</small>
+              } @else {
+                <small
+                  [class.change-positive]="vm.analytics.expenseChangePercent < 0"
+                  [class.change-negative]="vm.analytics.expenseChangePercent > 0"
+                >
+                  {{ vm.analytics.expenseChangePercent > 0 ? '+' : '' }}{{ vm.analytics.expenseChangePercent }}%
+                  {{
+                    t('analytics.vsPrevious', {
+                      period: analyticsComparisonPeriod(vm.analyticsFilters),
+                    })
+                  }}
+                </small>
+              }
             </article>
             <article>
               <span>{{ t('analytics.transactions') }}</span>
@@ -785,16 +840,25 @@
                 </small>
               } @else {
                 <small
-                  [class.change-up]="vm.analytics.changePercent > 0"
-                  [class.change-down]="vm.analytics.changePercent < 0"
+                  [class.change-positive]="
+                    (vm.analyticsFilters.transactionType === 'income' &&
+                      vm.analytics.changePercent > 0) ||
+                    (vm.analyticsFilters.transactionType === 'expense' &&
+                      vm.analytics.changePercent < 0)
+                  "
+                  [class.change-negative]="
+                    vm.analyticsFilters.transactionType === 'expense' &&
+                    vm.analytics.changePercent > 0
+                  "
+                  [class.change-caution]="
+                    vm.analyticsFilters.transactionType === 'income' &&
+                    vm.analytics.changePercent < 0
+                  "
                 >
                   {{ vm.analytics.changePercent > 0 ? '+' : '' }}{{ vm.analytics.changePercent }}%
                   {{
                     t('analytics.vsPrevious', {
-                      period:
-                        vm.analyticsFilters.mode === 'month'
-                          ? t('analytics.previousMonth')
-                          : t('analytics.previousYear'),
+                      period: analyticsComparisonPeriod(vm.analyticsFilters),
                     })
                   }}
                 </small>
@@ -870,9 +934,22 @@
                   <button
                     type="button"
                     class="chart-column"
+                    [attr.data-tooltip-align]="
+                      index < (vm.analyticsFilters.mode === 'month' ? 3 : 1)
+                        ? 'left'
+                        : index >=
+                            vm.analytics.points.length -
+                              (vm.analyticsFilters.mode === 'month' ? 3 : 1)
+                          ? 'right'
+                          : null
+                    "
                     [attr.data-tooltip]="
-                      (point.amountCents / 100
-                        | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale())
+                      (vm.analyticsFilters.mode === 'month'
+                        ? point.shortLabel + '/' + (vm.analyticsFilters.month + 1)
+                        : point.label) +
+                      ' · ' +
+                      ((point.amountCents / 100
+                        | currency: vm.limits.baseCurrency : 'symbol' : '1.2-2' : language.locale()) ?? '')
                     "
                     [attr.aria-label]="
                       t('analytics.openChartTransactions', {
@@ -1149,7 +1226,11 @@
           </div>
 
           @if (loadError()) {
-            <p class="error-message" role="alert">{{ loadError() }}</p>
+            <app-dismissible-message
+              [message]="loadError()"
+              [dismissLabel]="t('common.dismissMessage')"
+              (dismissed)="loadError.set('')"
+            />
           }
 
           @if (vm.expenses.length) {
@@ -1450,7 +1531,11 @@
             </div>
 
             @if (statementImportError()) {
-              <p class="error-message" role="alert">{{ statementImportError() }}</p>
+              <app-dismissible-message
+                [message]="statementImportError()"
+                [dismissLabel]="t('common.dismissMessage')"
+                (dismissed)="statementImportError.set('')"
+              />
             }
 
             @if (detectedStatementBalance(); as balance) {
@@ -1479,11 +1564,20 @@
             }
 
             @if (balanceBaselineError()) {
-              <p class="error-message" role="alert">{{ balanceBaselineError() }}</p>
+              <app-dismissible-message
+                [message]="balanceBaselineError()"
+                [dismissLabel]="t('common.dismissMessage')"
+                (dismissed)="balanceBaselineError.set('')"
+              />
             }
 
             @if (balanceBaselineSuccess()) {
-              <p class="success-message" role="status">{{ balanceBaselineSuccess() }}</p>
+              <app-dismissible-message
+                type="success"
+                [message]="balanceBaselineSuccess()"
+                [dismissLabel]="t('common.dismissMessage')"
+                (dismissed)="balanceBaselineSuccess.set('')"
+              />
             }
 
             <div
@@ -1797,7 +1891,11 @@
               </div>
 
               @if (chartPointDeleteError()) {
-                <p class="error-message" role="alert">{{ chartPointDeleteError() }}</p>
+                <app-dismissible-message
+                  [message]="chartPointDeleteError()"
+                  [dismissLabel]="t('common.dismissMessage')"
+                  (dismissed)="chartPointDeleteError.set('')"
+                />
               }
 
               <div class="breakdown-transactions-list">
@@ -1971,11 +2069,20 @@
           }
 
           @if (balanceBaselineError()) {
-            <p class="error-message" role="alert">{{ balanceBaselineError() }}</p>
+            <app-dismissible-message
+              [message]="balanceBaselineError()"
+              [dismissLabel]="t('common.dismissMessage')"
+              (dismissed)="balanceBaselineError.set('')"
+            />
           }
 
           @if (balanceBaselineSuccess()) {
-            <p class="success-message" role="status">{{ balanceBaselineSuccess() }}</p>
+            <app-dismissible-message
+              type="success"
+              [message]="balanceBaselineSuccess()"
+              [dismissLabel]="t('common.dismissMessage')"
+              (dismissed)="balanceBaselineSuccess.set('')"
+            />
           }
 
           <div class="balance-settings-actions">
@@ -2098,11 +2205,20 @@
           }
 
           @if (limitError()) {
-            <p class="error-message" role="alert">{{ limitError() }}</p>
+            <app-dismissible-message
+              [message]="limitError()"
+              [dismissLabel]="t('common.dismissMessage')"
+              (dismissed)="limitError.set('')"
+            />
           }
 
           @if (limitSuccess()) {
-            <p class="success-message" role="status">{{ limitSuccess() }}</p>
+            <app-dismissible-message
+              type="success"
+              [message]="limitSuccess()"
+              [dismissLabel]="t('common.dismissMessage')"
+              (dismissed)="limitSuccess.set('')"
+            />
           }
 
           <button
@@ -2143,7 +2259,11 @@
           </div>
 
           @if (categoryError()) {
-            <p class="error-message" role="alert">{{ categoryError() }}</p>
+            <app-dismissible-message
+              [message]="categoryError()"
+              [dismissLabel]="t('common.dismissMessage')"
+              (dismissed)="categoryError.set('')"
+            />
           }
 
           @if (customCategories().length) {
@@ -2248,7 +2368,11 @@
         }
 
         @if (accountDeleteError()) {
-          <p class="error-message" role="alert">{{ accountDeleteError() }}</p>
+          <app-dismissible-message
+            [message]="accountDeleteError()"
+            [dismissLabel]="t('common.dismissMessage')"
+            (dismissed)="accountDeleteError.set('')"
+          />
         }
 
         <div class="modal-actions">
@@ -2482,7 +2606,12 @@
         </div>
 
         @if (editError()) {
-          <p class="error-message edit-form-message" role="alert">{{ editError() }}</p>
+          <app-dismissible-message
+            class="edit-form-message"
+            [message]="editError()"
+            [dismissLabel]="t('common.dismissMessage')"
+            (dismissed)="editError.set('')"
+          />
         }
 
         <div class="modal-actions edit-form-actions">
@@ -2533,7 +2662,11 @@
       </div>
 
       @if (recurringError()) {
-        <p class="error-message" role="alert">{{ recurringError() }}</p>
+        <app-dismissible-message
+          [message]="recurringError()"
+          [dismissLabel]="t('common.dismissMessage')"
+          (dismissed)="recurringError.set('')"
+        />
       }
 
       @if (recurringSchedules().length) {
@@ -2669,7 +2802,11 @@
       </div>
 
       @if (deleteError()) {
-        <p class="error-message" role="alert">{{ deleteError() }}</p>
+        <app-dismissible-message
+          [message]="deleteError()"
+          [dismissLabel]="t('common.dismissMessage')"
+          (dismissed)="deleteError.set('')"
+        />
       }
 
       <div class="modal-actions">

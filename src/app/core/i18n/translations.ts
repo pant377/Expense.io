@@ -2,6 +2,7 @@ export type AppLanguage = 'en' | 'el';
 
 const EN_TRANSLATIONS = {
   'language.switch': 'Switch to Greek',
+  'common.dismissMessage': 'Dismiss message',
   'brand.home': 'Expense.io home',
   'auth.introEyebrow': 'Personal finance, without the noise',
   'auth.introTitle': 'Know where your money goes.',
@@ -154,9 +155,11 @@ const EN_TRANSLATIONS = {
   'analytics.incomeMinusExpenses': 'Income minus expenses',
   'analytics.noPrevious': 'No previous-period spending',
   'analytics.noPreviousIncome': 'No previous-period income',
+  'analytics.noPreviousBalance': 'No previous-period net balance',
   'analytics.vsPrevious': 'vs previous {{period}}',
   'analytics.previousMonth': 'month',
   'analytics.previousYear': 'year',
+  'analytics.previousYearToDate': 'year to the same date',
   'analytics.transactions': 'Transactions',
   'analytics.selectedPeriod': 'In the selected period',
   'analytics.average': 'Average expense',
@@ -351,6 +354,7 @@ export type TranslationKey = keyof typeof EN_TRANSLATIONS;
 
 const EL_TRANSLATIONS: Record<TranslationKey, string> = {
   'language.switch': 'Αλλαγή στα Αγγλικά',
+  'common.dismissMessage': 'Κλείσιμο μηνύματος',
   'brand.home': 'Αρχική σελίδα Expense.io',
   'auth.introEyebrow': 'Προσωπικά οικονομικά, χωρίς περιττή πολυπλοκότητα',
   'auth.introTitle': 'Μάθε πού πηγαίνουν τα χρήματά σου.',
@@ -504,9 +508,12 @@ const EL_TRANSLATIONS: Record<TranslationKey, string> = {
   'analytics.noPrevious': 'Δεν υπάρχουν έξοδα στην προηγούμενη περίοδο',
   'analytics.noPreviousIncome':
     'Δεν υπάρχουν έσοδα στην προηγούμενη περίοδο',
+  'analytics.noPreviousBalance':
+    'Δεν υπάρχει καθαρό υπόλοιπο στην προηγούμενη περίοδο',
   'analytics.vsPrevious': 'σε σχέση με τον προηγούμενο {{period}}',
   'analytics.previousMonth': 'μήνα',
   'analytics.previousYear': 'χρόνο',
+  'analytics.previousYearToDate': 'έτος έως την ίδια ημερομηνία',
   'analytics.transactions': 'Συναλλαγές',
   'analytics.selectedPeriod': 'Στην επιλεγμένη περίοδο',
   'analytics.average': 'Μέσο έξοδο',

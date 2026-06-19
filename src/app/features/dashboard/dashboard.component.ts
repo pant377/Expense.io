@@ -87,6 +87,7 @@ import { RecurringExpenseService } from '../../core/expenses/recurring-expense.s
 import { LanguageService } from '../../core/i18n/language.service';
 import { LanguageToggleComponent } from '../../core/i18n/language-toggle.component';
 import { TranslationKey } from '../../core/i18n/translations';
+import { DismissibleMessageComponent } from '../../core/messages/dismissible-message.component';
 import {
   EMPTY_SPENDING_LIMITS,
   SpendingLimits,
@@ -124,6 +125,7 @@ interface PdfTextItem {
     DatePipe,
     DecimalPipe,
     CategoryIconComponent,
+    DismissibleMessageComponent,
     LanguageToggleComponent,
     ReactiveFormsModule,
   ],
@@ -1634,6 +1636,16 @@ export class DashboardComponent {
 
   monthLabel(month: number): string {
     return this.language.month(month);
+  }
+
+  analyticsComparisonPeriod(filters: AnalyticsFilters): string {
+    if (filters.mode === 'month') {
+      return this.t('analytics.previousMonth');
+    }
+
+    return filters.year === new Date().getFullYear()
+      ? this.t('analytics.previousYearToDate')
+      : this.t('analytics.previousYear');
   }
 
   formatDateKey(dateKey: string): string {

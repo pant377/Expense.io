@@ -452,13 +452,18 @@
   font-size: 1.25rem;
 }
 
-.analytics-stats .change-up {
+.analytics-stats .change-positive {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.analytics-stats .change-negative {
   color: #b35f26;
   font-weight: 700;
 }
 
-.analytics-stats .change-down {
-  color: var(--primary);
+.analytics-stats .change-caution {
+  color: #9a6a13;
   font-weight: 700;
 }
 
@@ -605,6 +610,21 @@
 .chart-column:hover::after {
   opacity: 1;
   transform: translate(50%, 0);
+}
+
+.chart-column[data-tooltip-align="left"]::after {
+  right: auto;
+  left: 0;
+  transform: translate(0, 5px);
+}
+
+.chart-column[data-tooltip-align="right"]::after {
+  right: 0;
+  transform: translate(0, 5px);
+}
+
+.chart-column[data-tooltip-align]:is(:hover, :active)::after {
+  transform: translate(0, 0);
 }
 
 .category-breakdown {

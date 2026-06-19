@@ -38,6 +38,8 @@ export interface ExpenseAnalytics {
   totalCents: number;
   previousTotalCents: number;
   changePercent: number | null;
+  incomeChangePercent: number | null;
+  expenseChangePercent: number | null;
   incomeCents: number;
   expenseCents: number;
   count: number;
@@ -72,6 +74,7 @@ export function buildExpenseAnalytics(
   baseCurrency = 'EUR',
   rates: Record<string, number> = { EUR: 1.0 },
   locale = 'en-GB',
+  today = new Date(),
 ): ExpenseAnalytics {
   const convertedExpenses = expenses.map((expense) => ({
     ...expense,
@@ -84,7 +87,19 @@ export function buildExpenseAnalytics(
   }));
 
   const periodExpenses = filterForPeriod(convertedExpenses, filters);
-  const previousExpenses = filterForPeriod(convertedExpenses, previousPeriod(filters));
+  const comparisonCutoff = runningYearComparisonCutoff(
+    convertedExpenses,
+    filters,
+    today,
+  );
+  const previousExpenses = filterForPeriod(
+    convertedExpenses,
+    previousPeriod(filters),
+  ).filter((expense) =>
+    comparisonCutoff
+      ? isOnOrBeforeMonthAndDay(expense.occurredAt.toDate(), comparisonCutoff)
+      : true,
+  );
   const incomeCents = sumByType(periodExpenses, 'income');
   const expenseCents = sumByType(periodExpenses, 'expense');
   const previousIncomeCents = sumByType(previousExpenses, 'income');
@@ -131,9 +146,13 @@ export function buildExpenseAnalytics(
               : 'Monthly spending',
     totalCents,
     previousTotalCents,
-    changePercent: isMerged
-      ? null
-      : calculateChange(totalCents, previousTotalCents),
+    changePercent: calculateChange(
+      totalCents,
+      previousTotalCents,
+      isMerged,
+    ),
+    incomeChangePercent: calculateChange(incomeCents, previousIncomeCents),
+    expenseChangePercent: calculateChange(expenseCents, previousExpenseCents),
     incomeCents,
     expenseCents,
     count: periodExpenses.length,
@@ -311,10 +330,51 @@ function analyticsAmount(
     : -expense.amountCents;
 }
 
-function calculateChange(current: number, previous: number): number | null {
+function calculateChange(
+  current: number,
+  previous: number,
+  useAbsoluteBaseline = false,
+): number | null {
   if (!previous) {
     return current ? null : 0;
   }
 
-  return Math.round(((current - previous) / previous) * 100);
+  const baseline = useAbsoluteBaseline ? Math.abs(previous) : previous;
+  return Math.round(((current - previous) / baseline) * 100);
+}
+
+function runningYearComparisonCutoff(
+  expenses: Expense[],
+  filters: AnalyticsFilters,
+  today: Date,
+): Date | null {
+  if (
+    filters.mode !== 'year' ||
+    filters.year !== today.getFullYear()
+  ) {
+    return null;
+  }
+
+  const latestRecordedDate = expenses
+    .map((expense) => expense.occurredAt.toDate())
+    .filter(
+      (date) =>
+        date.getFullYear() === filters.year &&
+        isOnOrBeforeMonthAndDay(date, today),
+    )
+    .reduce<Date | null>(
+      (latest, date) =>
+        !latest || date.getTime() > latest.getTime() ? date : latest,
+      null,
+    );
+
+  return latestRecordedDate ?? today;
+}
+
+function isOnOrBeforeMonthAndDay(date: Date, cutoff: Date): boolean {
+  return (
+    date.getMonth() < cutoff.getMonth() ||
+    (date.getMonth() === cutoff.getMonth() &&
+      date.getDate() <= cutoff.getDate())
+  );
 }
