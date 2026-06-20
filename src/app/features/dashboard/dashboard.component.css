@@ -176,6 +176,10 @@
   align-self: start;
 }
 
+.primary-workspace.guardrails-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 :is(
   .expense-form-card,
   .limits-card,
@@ -966,6 +970,13 @@ h2 {
 
 .activity-more-menu {
   display: none;
+}
+
+@media (min-width: 601px) {
+  .activity-card .rows-per-page-container {
+    order: 1;
+    margin-left: auto;
+  }
 }
 
 .list-order {
@@ -2126,8 +2137,15 @@ h2 {
 }
 
 :host-context([data-theme="dark"]) .rows-select {
+  color-scheme: dark;
+  background-color: #1b2d34;
   border-left-color: #3b5059;
   color: var(--ink);
+}
+
+:host-context([data-theme="dark"]) .rows-select option {
+  color: #e7eff3;
+  background-color: #1b2d34;
 }
 
 .rows-per-page-container:has(.rows-select:focus-visible) {

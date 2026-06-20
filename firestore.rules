@@ -100,6 +100,7 @@ service cloud.firestore {
 
     function validSpendingLimits() {
       return request.resource.data.keys().hasOnly([
+          'showOnDashboard',
           'dailyLimitCents',
           'monthlyLimitCents',
           'excludeIncome',
@@ -110,6 +111,7 @@ service cloud.firestore {
           'updatedAt'
         ])
         && request.resource.data.keys().hasAll([
+          'showOnDashboard',
           'dailyLimitCents',
           'monthlyLimitCents',
           'excludeIncome',
@@ -118,6 +120,7 @@ service cloud.firestore {
           'baseCurrency',
           'updatedAt'
         ])
+        && request.resource.data.showOnDashboard is bool
         && (
           request.resource.data.dailyLimitCents == null
           || (

@@ -1,6 +1,7 @@
 import { Expense } from '../expenses/expense.model';
 
 export interface SpendingLimits {
+  showOnDashboard: boolean;
   dailyLimitCents: number | null;
   monthlyLimitCents: number | null;
   excludeIncome: boolean;
@@ -25,6 +26,7 @@ export interface SpendingLimitSummary {
 }
 
 export const EMPTY_SPENDING_LIMITS: SpendingLimits = {
+  showOnDashboard: false,
   dailyLimitCents: null,
   monthlyLimitCents: null,
   excludeIncome: true,

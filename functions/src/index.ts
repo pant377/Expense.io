@@ -9,6 +9,7 @@ admin.initializeApp();
 const db = admin.firestore();
 
 interface SpendingLimits {
+  showOnDashboard?: boolean;
   dailyLimitCents: number | null;
   monthlyLimitCents: number | null;
   excludeIncome: boolean;

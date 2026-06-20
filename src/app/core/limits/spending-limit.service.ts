@@ -35,6 +35,11 @@ export class SpendingLimitService {
 
             const data = snapshot.data();
             subscriber.next({
+              showOnDashboard:
+                typeof data['showOnDashboard'] === 'boolean'
+                  ? data['showOnDashboard']
+                  : typeof data['dailyLimitCents'] === 'number' ||
+                    typeof data['monthlyLimitCents'] === 'number',
               dailyLimitCents:
                 typeof data['dailyLimitCents'] === 'number'
                   ? data['dailyLimitCents']

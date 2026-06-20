@@ -299,6 +299,7 @@ export class DashboardComponent {
   });
 
   readonly spendingLimitForm = this.formBuilder.group({
+    showOnDashboard: [false],
     dailyLimit: [
       null as number | null,
       [Validators.min(0.01), Validators.max(1_000_000_000)],
@@ -671,6 +672,7 @@ export class DashboardComponent {
     }
 
     const {
+      showOnDashboard,
       dailyLimit,
       monthlyLimit,
       excludeIncome,
@@ -692,6 +694,7 @@ export class DashboardComponent {
 
     try {
       await this.spendingLimitService.saveLimits(user.uid, {
+        showOnDashboard: showOnDashboard ?? false,
         dailyLimitCents:
           dailyLimit === null ? null : eurosToCents(dailyLimit),
         monthlyLimitCents:
@@ -1761,6 +1764,7 @@ export class DashboardComponent {
 
     this.spendingLimitForm.setValue(
       {
+        showOnDashboard: limits.showOnDashboard,
         dailyLimit:
           limits.dailyLimitCents === null
             ? null

@@ -147,7 +147,10 @@
         }
       </section>
 
-      <section class="primary-workspace">
+      <section
+        class="primary-workspace"
+        [class.guardrails-hidden]="!vm.limits.showOnDashboard"
+      >
         <aside
           class="expense-form-card collapsible-card"
           [class.section-collapsed]="isSectionCollapsed('transaction')"
@@ -534,6 +537,7 @@
           }
         </aside>
 
+      @if (vm.limits.showOnDashboard) {
       <section
         class="limits-card collapsible-card"
         [class.section-collapsed]="isSectionCollapsed('limits')"
@@ -702,6 +706,7 @@
         </div>
         }
       </section>
+      }
       </section>
 
       <section
@@ -2343,6 +2348,17 @@
           [formGroup]="spendingLimitForm"
           (ngSubmit)="saveSpendingLimits()"
         >
+          <label class="limit-income-toggle">
+            <input type="checkbox" formControlName="showOnDashboard">
+            <span class="limit-income-toggle-control" aria-hidden="true">
+              <span></span>
+            </span>
+            <span>
+              <strong>{{ t('limits.showOnDashboard') }}</strong>
+              <small>{{ t('limits.showOnDashboardDescription') }}</small>
+            </span>
+          </label>
+
           <div class="field">
             <label for="daily-limit-settings">{{ t('limits.dailyLimit') }}</label>
             <div class="amount-input">

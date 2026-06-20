@@ -2,6 +2,7 @@ import { Timestamp } from 'firebase/firestore';
 
 import { Expense } from '../expenses/expense.model';
 import {
+  EMPTY_SPENDING_LIMITS,
   SpendingLimits,
   buildSpendingLimitSummary,
 } from './spending-limit.model';
@@ -30,6 +31,7 @@ function expense(
 
 describe('spending limits', () => {
   const limits: SpendingLimits = {
+    showOnDashboard: true,
     dailyLimitCents: 2000,
     monthlyLimitCents: 10000,
     excludeIncome: true,
@@ -37,6 +39,10 @@ describe('spending limits', () => {
     alertThresholds: [],
     baseCurrency: 'EUR',
   };
+
+  it('keeps guardrails hidden by default', () => {
+    expect(EMPTY_SPENDING_LIMITS.showOnDashboard).toBeFalse();
+  });
 
   it('calculates daily and monthly usage for the current periods', () => {
     const summary = buildSpendingLimitSummary(
@@ -62,6 +68,7 @@ describe('spending limits', () => {
     const summary = buildSpendingLimitSummary(
       [expense('today', 2500, '2026-06-13')],
       {
+        showOnDashboard: false,
         dailyLimitCents: null,
         monthlyLimitCents: null,
         excludeIncome: true,

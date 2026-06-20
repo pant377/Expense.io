@@ -112,6 +112,9 @@ const EN_TRANSLATIONS = {
   'limits.title': 'Daily and monthly limits',
   'limits.description':
     'Set optional targets.',
+  'limits.showOnDashboard': 'Show spending guardrails on the dashboard',
+  'limits.showOnDashboardDescription':
+    'Display your daily and monthly limit progress on the main dashboard.',
   'limits.dailyLimit': 'Daily limit',
   'limits.monthlyLimit': 'Monthly limit',
   'limits.excludeIncome': 'Exclude income from daily and monthly limits',
@@ -469,6 +472,9 @@ const EL_TRANSLATIONS: Record<TranslationKey, string> = {
   'limits.title': 'Ημερήσια και μηνιαία όρια',
   'limits.description':
     'Όρισε προαιρετικούς στόχους εξόδων. Η καταχώρηση νέων εξόδων παραμένει πάντα διαθέσιμη.',
+  'limits.showOnDashboard': 'Εμφάνιση ορίων εξόδων στον πίνακα ελέγχου',
+  'limits.showOnDashboardDescription':
+    'Εμφάνισε την πρόοδο των ημερήσιων και μηνιαίων ορίων στον κύριο πίνακα.',
   'limits.dailyLimit': 'Ημερήσιο όριο',
   'limits.monthlyLimit': 'Μηνιαίο όριο',
   'limits.excludeIncome': 'Εξαίρεση εσόδων από ημερήσια και μηνιαία όρια',
