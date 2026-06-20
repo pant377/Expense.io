@@ -39,7 +39,7 @@ html {
 }
 
 body {
-  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   color: var(--ink);
   background:
@@ -70,6 +70,90 @@ select {
 
 button {
   cursor: pointer;
+}
+
+app-dashboard .mobile-page-status {
+  display: none;
+}
+
+app-dashboard :is(.collapsible-card, .welcome-copy) {
+  position: relative;
+}
+
+app-dashboard .primary-workspace {
+  align-items: start;
+}
+
+app-dashboard .collapsible-card {
+  width: 100%;
+}
+
+app-dashboard .section-toggle {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 4;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  padding: 0;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--surface) 90%, var(--canvas));
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+app-dashboard .welcome-copy .section-toggle {
+  top: 0;
+  right: 0;
+}
+
+app-dashboard .section-toggle svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 180ms ease;
+}
+
+app-dashboard .section-toggle.collapsed svg {
+  transform: rotate(-90deg);
+}
+
+app-dashboard .section-toggle:hover {
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--line));
+}
+
+app-dashboard :is(
+  .expense-form-heading,
+  .limits-header,
+  .analytics-header,
+  .activity-card .list-header
+) {
+  padding-right: 3.25rem;
+}
+
+app-dashboard .welcome-copy {
+  padding-right: 3.25rem;
+}
+
+app-dashboard .section-collapsed :is(
+  .expense-import-support,
+  .limits-header > div > p:last-child,
+  .list-order
+) {
+  display: none;
+}
+
+app-dashboard .filter-toggle-button.active {
+  color: white;
+  background: var(--primary);
+  border-color: var(--primary);
 }
 
 a {
@@ -2159,6 +2243,109 @@ app-dashboard .expense-item.income-transaction:hover {
 }
 
 @media (max-width: 600px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  app-dashboard .dashboard-shell {
+    max-width: calc(100vw - 1rem);
+    overflow-x: clip;
+  }
+
+  app-dashboard .summary-grid,
+  app-dashboard .analytics-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  app-dashboard .section-toggle {
+    top: 0.85rem;
+    right: 0.85rem;
+  }
+
+  app-dashboard .welcome-copy .section-toggle {
+    top: 0;
+    right: 0;
+  }
+
+  app-dashboard .section-collapsed {
+    min-height: 0;
+  }
+
+  app-dashboard .limits-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  app-dashboard .limits-header > div {
+    width: 100%;
+  }
+
+  app-dashboard .edit-limits-button {
+    align-self: flex-start;
+  }
+
+  app-dashboard .expense-list-card,
+  app-dashboard .expense-pagination,
+  app-dashboard .pagination-controls {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  app-dashboard .expense-list-card,
+  app-dashboard .expense-pagination {
+    overflow-x: hidden;
+  }
+
+  app-dashboard .pagination-controls .pagination-page-button,
+  app-dashboard .pagination-controls .pagination-ellipsis {
+    display: none;
+  }
+
+  app-dashboard .pagination-controls {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) 42px;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  app-dashboard .mobile-page-status {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    background: color-mix(in srgb, var(--surface) 88%, var(--canvas));
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    font-size: 0.82rem;
+    font-weight: 800;
+  }
+
+  .modal-backdrop {
+    align-items: end;
+    padding: max(0.75rem, env(safe-area-inset-top, 0)) 0 0;
+  }
+
+  :is(
+    .settings-modal,
+    .delete-account-modal,
+    .edit-expense-modal,
+    .recurring-modal,
+    .statement-import-modal,
+    .breakdown-transactions-modal,
+    .delete-modal
+  ) {
+    width: 100%;
+    max-height: calc(100dvh - max(0.75rem, env(safe-area-inset-top, 0)));
+    padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom, 0));
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 24px 24px 0 0;
+  }
+
   app-dashboard .analytics-header-controls {
     width: 100%;
     grid-template-columns: 1fr;

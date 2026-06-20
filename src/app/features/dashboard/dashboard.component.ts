@@ -117,6 +117,13 @@ interface PdfTextItem {
   transform?: readonly unknown[];
 }
 
+type DashboardSection =
+  | 'summary'
+  | 'transaction'
+  | 'limits'
+  | 'analytics'
+  | 'activity';
+
 @Component({
   selector: 'app-dashboard',
   imports: [
@@ -223,6 +230,8 @@ export class DashboardComponent {
   readonly hoveredPieCategory = signal<CategoryBreakdown | null>(null);
   readonly expensePage = signal(1);
   readonly expensePageSize = signal(5);
+  readonly expenseFiltersOpen = signal(false);
+  readonly collapsedSections = signal<ReadonlySet<DashboardSection>>(new Set());
   readonly expenseListFilters = signal<ExpenseListFilters>({
     ...EMPTY_EXPENSE_LIST_FILTERS,
   });
@@ -1576,6 +1585,28 @@ export class DashboardComponent {
   async logout(): Promise<void> {
     await this.authService.logout();
     await this.router.navigateByUrl('/auth');
+  }
+
+  isSectionCollapsed(section: DashboardSection): boolean {
+    return this.collapsedSections().has(section);
+  }
+
+  toggleSection(section: DashboardSection): void {
+    this.collapsedSections.update((current) => {
+      const next = new Set(current);
+
+      if (next.has(section)) {
+        next.delete(section);
+      } else {
+        next.add(section);
+      }
+
+      return next;
+    });
+  }
+
+  toggleExpenseFilters(): void {
+    this.expenseFiltersOpen.update((open) => !open);
   }
 
   timestampToDate(timestamp: Timestamp): Date {

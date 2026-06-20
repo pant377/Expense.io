@@ -1,5 +1,8 @@
 import { Injectable, NgZone, inject } from '@angular/core';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
+import { Capacitor } from '@capacitor/core';
 import {
+  AuthCredential,
   EmailAuthProvider,
   GoogleAuthProvider,
   User,
@@ -10,6 +13,7 @@ import {
   reauthenticateWithPopup,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
+  signInWithCredential,
   signInWithPopup,
   signOut,
   updateProfile,
@@ -58,13 +62,27 @@ export class AuthService {
   }
 
   async loginWithGoogle(): Promise<void> {
-    const credential = await signInWithPopup(firebaseAuth, new GoogleAuthProvider());
+    const credential = this.usesNativeGoogleSignIn()
+      ? await signInWithCredential(
+          firebaseAuth,
+          await this.createNativeGoogleCredential(),
+        )
+      : await signInWithPopup(firebaseAuth, new GoogleAuthProvider());
+
     await credential.user.getIdToken();
 
     void this.syncGoogleProfile(credential.user);
   }
 
   async logout(): Promise<void> {
+    if (this.usesNativeGoogleSignIn()) {
+      try {
+        await FirebaseAuthentication.signOut();
+      } catch {
+        // The web Firebase session still needs to be cleared if native sign-out fails.
+      }
+    }
+
     await signOut(firebaseAuth);
   }
 
@@ -94,7 +112,14 @@ export class AuthService {
     );
 
     if (usesGoogle) {
-      await reauthenticateWithPopup(user, new GoogleAuthProvider());
+      if (this.usesNativeGoogleSignIn()) {
+        await reauthenticateWithCredential(
+          user,
+          await this.createNativeGoogleCredential(),
+        );
+      } else {
+        await reauthenticateWithPopup(user, new GoogleAuthProvider());
+      }
       return;
     }
 
@@ -137,5 +162,23 @@ export class AuthService {
     } catch {
       // Profile synchronization is secondary and must not block a successful sign-in.
     }
+  }
+
+  private usesNativeGoogleSignIn(): boolean {
+    return Capacitor.getPlatform() === 'android';
+  }
+
+  private async createNativeGoogleCredential(): Promise<AuthCredential> {
+    const result = await FirebaseAuthentication.signInWithGoogle();
+    const idToken = result.credential?.idToken;
+
+    if (!idToken) {
+      throw { code: 'auth/invalid-credential' };
+    }
+
+    return GoogleAuthProvider.credential(
+      idToken,
+      result.credential?.accessToken,
+    );
   }
 }

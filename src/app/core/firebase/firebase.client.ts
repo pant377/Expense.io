@@ -1,5 +1,11 @@
+import { Capacitor } from '@capacitor/core';
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { connectAuthEmulator, getAuth } from 'firebase/auth';
+import {
+  connectAuthEmulator,
+  getAuth,
+  indexedDBLocalPersistence,
+  initializeAuth,
+} from 'firebase/auth';
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
 import {
   connectStorageEmulator,
@@ -10,7 +16,9 @@ import { environment } from '../../../environments/environment';
 
 const app = getApps().length ? getApp() : initializeApp(environment.firebase);
 
-export const firebaseAuth = getAuth(app);
+export const firebaseAuth = Capacitor.isNativePlatform()
+  ? initializeAuth(app, { persistence: indexedDBLocalPersistence })
+  : getAuth(app);
 export const firestore = getFirestore(app);
 export const firebaseStorage = getStorage(app);
 

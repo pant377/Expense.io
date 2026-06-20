@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "239234412339",
+    "firebase_url": "https://thenewone-3b948.firebaseio.com",
+    "project_id": "thenewone-3b948",
+    "storage_bucket": "thenewone-3b948.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:239234412339:android:97dfde85cd29c83b865846",
+        "android_client_info": {
+          "package_name": "io.expense.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "239234412339-pnc0ou9t6ej0ar6pv9rpn0v85pl5hvvd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "io.expense.app",
+            "certificate_hash": "e31fd2cf8c11f6bc1f4098d2665d5728b48fc9da"
+          }
+        },
+        {
+          "client_id": "239234412339-gjih5akkpj5cd2624o9hrk008ds41inh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBFYz-De-wzxqzPVE7FdlYM-Ly16fzGoyk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "239234412339-gjih5akkpj5cd2624o9hrk008ds41inh.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

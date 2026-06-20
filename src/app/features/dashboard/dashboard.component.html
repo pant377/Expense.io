@@ -34,13 +34,48 @@
             </svg>
           </button>
           <button class="logout-button" type="button" (click)="logout()">
-            {{ t('dashboard.signOut') }}
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M10 17l5-5-5-5"></path>
+              <path d="M15 12H3"></path>
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            </svg>
+            <span>{{ t('dashboard.signOut') }}</span>
           </button>
         </div>
       </header>
 
-      <section class="welcome">
-        <div>
+      <section class="welcome" [class.section-collapsed]="isSectionCollapsed('summary')">
+        <div class="welcome-copy">
+          <!-- <button
+            class="section-toggle"
+            type="button"
+            [class.collapsed]="isSectionCollapsed('summary')"
+            [attr.aria-expanded]="!isSectionCollapsed('summary')"
+            aria-controls="summary-content"
+            [attr.aria-label]="
+              isSectionCollapsed('summary')
+                ? t('dashboard.expandSection')
+                : t('dashboard.collapseSection')
+            "
+            [attr.title]="
+              isSectionCollapsed('summary')
+                ? t('dashboard.expandSection')
+                : t('dashboard.collapseSection')
+            "
+            (click)="toggleSection('summary')"
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="m6 9 6 6 6-6"></path>
+            </svg>
+          </button> -->
           <p class="eyebrow">{{ t('dashboard.overviewEyebrow') }}</p>
           <h1>
             {{ t('dashboard.greeting') }},
@@ -49,7 +84,12 @@
           <p>{{ t('dashboard.overviewDescription') }}</p>
         </div>
 
-        <div class="summary-grid" [attr.aria-label]="t('dashboard.summaryAria')">
+        @if (!isSectionCollapsed('summary')) {
+        <div
+          id="summary-content"
+          class="summary-grid section-content"
+          [attr.aria-label]="t('dashboard.summaryAria')"
+        >
           <article class="summary-card primary-summary">
             <span>{{ t('dashboard.totalIncomeEver') }}</span>
             <strong>
@@ -104,10 +144,36 @@
             }
           </article>
         </div>
+        }
       </section>
 
       <section class="primary-workspace">
-        <aside class="expense-form-card">
+        <aside
+          class="expense-form-card collapsible-card"
+          [class.section-collapsed]="isSectionCollapsed('transaction')"
+        >
+          <button
+            class="section-toggle"
+            type="button"
+            [class.collapsed]="isSectionCollapsed('transaction')"
+            [attr.aria-expanded]="!isSectionCollapsed('transaction')"
+            aria-controls="transaction-content"
+            [attr.aria-label]="
+              isSectionCollapsed('transaction')
+                ? t('dashboard.expandSection')
+                : t('dashboard.collapseSection')
+            "
+            [attr.title]="
+              isSectionCollapsed('transaction')
+                ? t('dashboard.expandSection')
+                : t('dashboard.collapseSection')
+            "
+            (click)="toggleSection('transaction')"
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="m6 9 6 6 6-6"></path>
+            </svg>
+          </button>
           <div class="expense-form-heading">
             <div>
               <p class="eyebrow">{{ t('expense.newEyebrow') }}</p>
@@ -119,6 +185,7 @@
                 }}
               </h2>
             </div>
+            @if (!isSectionCollapsed('transaction')) {
             <input
               #statementPdfInput
               class="visually-hidden"
@@ -140,7 +207,10 @@
               </svg>
               <span>{{ isReadingStatement() ? t('import.reading') : t('import.pdf') }}</span>
             </button>
+            }
           </div>
+          @if (!isSectionCollapsed('transaction')) {
+          <div id="transaction-content" class="section-content">
           <p class="expense-import-support">{{ t('import.supportedBanks') }}</p>
 
           @if (statementImportError() && !statementImportOpen()) {
@@ -460,21 +530,52 @@
               }}
             </button>
           </form>
+          </div>
+          }
         </aside>
 
-      <section class="limits-card" aria-labelledby="limits-title">
+      <section
+        class="limits-card collapsible-card"
+        [class.section-collapsed]="isSectionCollapsed('limits')"
+        aria-labelledby="limits-title"
+      >
+        <button
+          class="section-toggle"
+          type="button"
+          [class.collapsed]="isSectionCollapsed('limits')"
+          [attr.aria-expanded]="!isSectionCollapsed('limits')"
+          aria-controls="limits-content"
+          [attr.aria-label]="
+            isSectionCollapsed('limits')
+              ? t('dashboard.expandSection')
+              : t('dashboard.collapseSection')
+          "
+          [attr.title]="
+            isSectionCollapsed('limits')
+              ? t('dashboard.expandSection')
+              : t('dashboard.collapseSection')
+          "
+          (click)="toggleSection('limits')"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="m6 9 6 6 6-6"></path>
+          </svg>
+        </button>
         <div class="limits-header">
           <div>
             <p class="eyebrow">{{ t('limits.eyebrow') }}</p>
             <h2 id="limits-title">{{ t('limits.title') }}</h2>
             <p>{{ t('limits.description') }}</p>
           </div>
+          @if (!isSectionCollapsed('limits')) {
           <button class="edit-limits-button" type="button" (click)="openSettings()">
             {{ t('limits.edit') }}
           </button>
+          }
         </div>
 
-        <div class="limit-status-grid" aria-live="polite">
+        @if (!isSectionCollapsed('limits')) {
+        <div id="limits-content" class="limit-status-grid section-content" aria-live="polite">
           <article
             class="limit-status"
             [class.limit-exceeded]="vm.limitSummary.daily?.isExceeded"
@@ -599,14 +700,38 @@
             }
           </article>
         </div>
+        }
       </section>
       </section>
 
       <section
-        class="analytics-card"
+        class="analytics-card collapsible-card"
+        [class.section-collapsed]="isSectionCollapsed('analytics')"
         aria-labelledby="analytics-title"
         [attr.data-transaction-type]="vm.analyticsFilters.transactionType"
       >
+        <button
+          class="section-toggle"
+          type="button"
+          [class.collapsed]="isSectionCollapsed('analytics')"
+          [attr.aria-expanded]="!isSectionCollapsed('analytics')"
+          aria-controls="analytics-content"
+          [attr.aria-label]="
+            isSectionCollapsed('analytics')
+              ? t('dashboard.expandSection')
+              : t('dashboard.collapseSection')
+          "
+          [attr.title]="
+            isSectionCollapsed('analytics')
+              ? t('dashboard.expandSection')
+              : t('dashboard.collapseSection')
+          "
+          (click)="toggleSection('analytics')"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="m6 9 6 6 6-6"></path>
+          </svg>
+        </button>
         <div class="analytics-header">
           <div>
             <p class="eyebrow">
@@ -623,6 +748,7 @@
             </h2>
           </div>
 
+          @if (!isSectionCollapsed('analytics')) {
           <div class="analytics-header-controls">
             <div
               class="period-tabs transaction-tabs"
@@ -670,8 +796,11 @@
               </button>
             </div>
           </div>
+          }
         </div>
 
+        @if (!isSectionCollapsed('analytics')) {
+        <div id="analytics-content" class="section-content">
         <div class="analytics-filters" [attr.aria-label]="t('analytics.filtersAria')">
           <label class="filter-control">
             <span>{{ t('analytics.year') }}</span>
@@ -1161,19 +1290,60 @@
             </article>
           }
         </div>
+        </div>
+        }
       </section>
 
       <section
-        class="expense-list-card activity-card"
+        class="expense-list-card activity-card collapsible-card"
+        [class.section-collapsed]="isSectionCollapsed('activity')"
         aria-labelledby="expenses-title"
       >
+          <button
+            class="section-toggle"
+            type="button"
+            [class.collapsed]="isSectionCollapsed('activity')"
+            [attr.aria-expanded]="!isSectionCollapsed('activity')"
+            aria-controls="activity-content"
+            [attr.aria-label]="
+              isSectionCollapsed('activity')
+                ? t('dashboard.expandSection')
+                : t('dashboard.collapseSection')
+            "
+            [attr.title]="
+              isSectionCollapsed('activity')
+                ? t('dashboard.expandSection')
+                : t('dashboard.collapseSection')
+            "
+            (click)="toggleSection('activity')"
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="m6 9 6 6 6-6"></path>
+            </svg>
+          </button>
           <div class="list-header">
             <div>
               <p class="eyebrow">{{ t('expense.activity') }}</p>
               <h2 id="expenses-title">{{ t('expense.recent') }}</h2>
               <small class="list-order">{{ t('expense.newestAdded') }}</small>
             </div>
+            @if (!isSectionCollapsed('activity')) {
             <div class="activity-actions">
+              <button
+                class="activity-tool-button filter-toggle-button"
+                type="button"
+                [class.active]="expenseFiltersOpen()"
+                [attr.aria-expanded]="expenseFiltersOpen()"
+                aria-controls="expense-filter-panel"
+                (click)="toggleExpenseFilters()"
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M4 5h16l-6 7v5l-4 2v-7Z"></path>
+                </svg>
+                <span>
+                  {{ expenseFiltersOpen() ? t('expense.hideFilters') : t('expense.showFilters') }}
+                </span>
+              </button>
               <div class="rows-per-page-container">
                 <span class="rows-select-label" aria-hidden="true">{{ t('expense.rowsPerPage') }}</span>
                 <select
@@ -1223,8 +1393,11 @@
                 }
               </span>
             </div>
+            }
           </div>
 
+          @if (!isSectionCollapsed('activity')) {
+          <div id="activity-content" class="section-content">
           @if (loadError()) {
             <app-dismissible-message
               [message]="loadError()"
@@ -1233,8 +1406,9 @@
             />
           }
 
-          @if (vm.expenses.length) {
+          @if (vm.expenses.length && expenseFiltersOpen()) {
             <div
+              id="expense-filter-panel"
               class="expense-list-filters"
               [attr.aria-label]="t('expense.filtersAria')"
             >
@@ -1444,7 +1618,7 @@
                   @for (control of vm.expensePagination.controls; track control.key) {
                     @if (control.page !== null) {
                       <button
-                        class="pagination-button"
+                        class="pagination-button pagination-page-button"
                         type="button"
                         [class.active]="control.page === vm.expensePagination.currentPage"
                         [attr.aria-current]="
@@ -1461,6 +1635,10 @@
                       </span>
                     }
                   }
+
+                  <span class="mobile-page-status" aria-hidden="true">
+                    {{ vm.expensePagination.currentPage }} / {{ vm.expensePagination.totalPages }}
+                  </span>
 
                   <button
                     class="pagination-button pagination-arrow"
@@ -1495,6 +1673,8 @@
               <h3>{{ t('expense.emptyTitle') }}</h3>
               <p>{{ t('expense.emptyDescription') }}</p>
             </div>
+          }
+          </div>
           }
       </section>
 
