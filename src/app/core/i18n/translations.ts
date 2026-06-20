@@ -3,6 +3,7 @@ export type AppLanguage = 'en' | 'el';
 const EN_TRANSLATIONS = {
   'language.switch': 'Switch to Greek',
   'common.dismissMessage': 'Dismiss message',
+  'common.moreActions': 'More',
   'brand.home': 'Expense.io home',
   'auth.introEyebrow': 'Personal finance, without the noise',
   'auth.introTitle': 'Know where your money goes.',
@@ -359,6 +360,7 @@ export type TranslationKey = keyof typeof EN_TRANSLATIONS;
 const EL_TRANSLATIONS: Record<TranslationKey, string> = {
   'language.switch': 'Αλλαγή στα Αγγλικά',
   'common.dismissMessage': 'Κλείσιμο μηνύματος',
+  'common.moreActions': 'Περισσότερα',
   'brand.home': 'Αρχική σελίδα Expense.io',
   'auth.introEyebrow': 'Προσωπικά οικονομικά, χωρίς περιττή πολυπλοκότητα',
   'auth.introTitle': 'Μάθε πού πηγαίνουν τα χρήματά σου.',

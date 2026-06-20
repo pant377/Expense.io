@@ -93,7 +93,7 @@ app-dashboard .section-toggle {
   top: 1rem;
   right: 1rem;
   z-index: 4;
-  display: grid;
+  display: none;
   width: 40px;
   height: 40px;
   place-items: center;
@@ -135,11 +135,11 @@ app-dashboard :is(
   .analytics-header,
   .activity-card .list-header
 ) {
-  padding-right: 3.25rem;
+  padding-right: 0;
 }
 
 app-dashboard .welcome-copy {
-  padding-right: 3.25rem;
+  padding-right: 0;
 }
 
 app-dashboard .section-collapsed :is(
@@ -2159,7 +2159,6 @@ app-dashboard .expense-item.income-transaction:hover {
 :root[data-theme="dark"] .edit-limits-button,
 :root[data-theme="dark"] .clear-expense-filters,
 :root[data-theme="dark"] .panel-heading > span,
-:root[data-theme="dark"] .expense-count,
 :root[data-theme="dark"] .empty-state > span,
 :root[data-theme="dark"] .analytics-empty > span {
   color: #66d4c9;
@@ -2260,8 +2259,22 @@ app-dashboard .expense-item.income-transaction:hover {
   }
 
   app-dashboard .section-toggle {
+    display: grid;
     top: 0.85rem;
     right: 0.85rem;
+  }
+
+  app-dashboard :is(
+    .expense-form-heading,
+    .limits-header,
+    .analytics-header,
+    .activity-card .list-header
+  ) {
+    padding-right: 3.25rem;
+  }
+
+  app-dashboard .welcome-copy {
+    padding-right: 3.25rem;
   }
 
   app-dashboard .welcome-copy .section-toggle {
@@ -2498,10 +2511,6 @@ app-dashboard .expense-item.income-transaction:hover {
 
   .activity-tool-button {
     flex: 1 1 auto;
-  }
-
-  .activity-actions .expense-count {
-    margin-left: auto;
   }
 
   .expense-item-actions {

@@ -141,6 +141,12 @@ type DashboardSection =
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardComponent {
+  private readonly mobileViewport = window.matchMedia('(max-width: 600px)');
+  private readonly handleMobileViewportChange = (event: MediaQueryListEvent): void => {
+    if (!event.matches) {
+      this.collapsedSections.set(new Set());
+    }
+  };
   private readonly categoryColors: Record<ExpenseCategory, string> = {
     Food: '#e0a33c',
     Transport: '#8a67b1',
@@ -324,7 +330,10 @@ export class DashboardComponent {
   });
 
   constructor() {
+    this.mobileViewport.addEventListener('change', this.handleMobileViewportChange);
+
     this.destroyRef.onDestroy(() => {
+      this.mobileViewport.removeEventListener('change', this.handleMobileViewportChange);
       this.revokePreviewUrl(this.newExpensePhotoPreviewUrl());
       this.revokePreviewUrl(this.editExpensePhotoPreviewUrl());
       document.body.classList.remove('modal-open');
@@ -1592,6 +1601,10 @@ export class DashboardComponent {
   }
 
   toggleSection(section: DashboardSection): void {
+    if (!this.mobileViewport.matches) {
+      return;
+    }
+
     this.collapsedSections.update((current) => {
       const next = new Set(current);
 

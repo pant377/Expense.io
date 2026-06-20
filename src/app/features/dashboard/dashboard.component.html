@@ -1329,21 +1329,6 @@
             </div>
             @if (!isSectionCollapsed('activity')) {
             <div class="activity-actions">
-              <button
-                class="activity-tool-button filter-toggle-button"
-                type="button"
-                [class.active]="expenseFiltersOpen()"
-                [attr.aria-expanded]="expenseFiltersOpen()"
-                aria-controls="expense-filter-panel"
-                (click)="toggleExpenseFilters()"
-              >
-                <svg aria-hidden="true" viewBox="0 0 24 24">
-                  <path d="M4 5h16l-6 7v5l-4 2v-7Z"></path>
-                </svg>
-                <span>
-                  {{ expenseFiltersOpen() ? t('expense.hideFilters') : t('expense.showFilters') }}
-                </span>
-              </button>
               <div class="rows-per-page-container">
                 <span class="rows-select-label" aria-hidden="true">{{ t('expense.rowsPerPage') }}</span>
                 <select
@@ -1358,9 +1343,24 @@
                   <option [value]="15">15</option>
                 </select>
               </div>
+              <button
+                class="activity-tool-button filter-toggle-button activity-desktop-action"
+                type="button"
+                [class.active]="expenseFiltersOpen()"
+                [attr.aria-expanded]="expenseFiltersOpen()"
+                aria-controls="expense-filter-panel"
+                (click)="toggleExpenseFilters()"
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M4 5h16l-6 7v5l-4 2v-7Z"></path>
+                </svg>
+                <span>
+                  {{ expenseFiltersOpen() ? t('expense.hideFilters') : t('expense.showFilters') }}
+                </span>
+              </button>
 
               <button
-                class="activity-tool-button"
+                class="activity-tool-button activity-desktop-action"
                 type="button"
                 (click)="openRecurringExpenses()"
               >
@@ -1371,7 +1371,7 @@
                 <span>{{ t('recurring.manage') }}</span>
               </button>
               <button
-                class="activity-tool-button"
+                class="activity-tool-button activity-desktop-action"
                 type="button"
                 [disabled]="!vm.filteredExpenses.length"
                 (click)="exportExpenses(vm.filteredExpenses)"
@@ -1383,15 +1383,62 @@
                 </svg>
                 <span>{{ t('export.csv') }}</span>
               </button>
-              <span
-                class="expense-count"
-                [class.filtered]="vm.hasExpenseListFilters"
-              >
-                {{ vm.expensePagination.totalItems }}
-                @if (vm.hasExpenseListFilters) {
-                  <small>/ {{ vm.expenses.length }}</small>
-                }
-              </span>
+
+              <details #activityMoreMenu class="activity-more-menu">
+                <summary
+                  class="activity-tool-button"
+                  [class.active]="expenseFiltersOpen()"
+                  [attr.aria-label]="t('common.moreActions')"
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <circle cx="5" cy="12" r="1"></circle>
+                    <circle cx="12" cy="12" r="1"></circle>
+                    <circle cx="19" cy="12" r="1"></circle>
+                  </svg>
+                  <span>{{ t('common.moreActions') }}</span>
+                </summary>
+                <div class="activity-more-menu-panel">
+                  <button
+                    class="activity-tool-button filter-toggle-button activity-menu-action"
+                    type="button"
+                    [class.active]="expenseFiltersOpen()"
+                    [attr.aria-expanded]="expenseFiltersOpen()"
+                    aria-controls="expense-filter-panel"
+                    (click)="activityMoreMenu.open = false; toggleExpenseFilters()"
+                  >
+                    <svg aria-hidden="true" viewBox="0 0 24 24">
+                      <path d="M4 5h16l-6 7v5l-4 2v-7Z"></path>
+                    </svg>
+                    <span>
+                      {{ expenseFiltersOpen() ? t('expense.hideFilters') : t('expense.showFilters') }}
+                    </span>
+                  </button>
+                  <button
+                    class="activity-tool-button activity-menu-action"
+                    type="button"
+                    (click)="activityMoreMenu.open = false; openRecurringExpenses()"
+                  >
+                    <svg aria-hidden="true" viewBox="0 0 24 24">
+                      <path d="M20 7h-5V2"></path>
+                      <path d="M20 7a8 8 0 1 0 1.4 8"></path>
+                    </svg>
+                    <span>{{ t('recurring.manage') }}</span>
+                  </button>
+                  <button
+                    class="activity-tool-button activity-menu-action"
+                    type="button"
+                    [disabled]="!vm.filteredExpenses.length"
+                    (click)="activityMoreMenu.open = false; exportExpenses(vm.filteredExpenses)"
+                  >
+                    <svg aria-hidden="true" viewBox="0 0 24 24">
+                      <path d="M12 3v12"></path>
+                      <path d="m7 10 5 5 5-5"></path>
+                      <path d="M5 21h14"></path>
+                    </svg>
+                    <span>{{ t('export.csv') }}</span>
+                  </button>
+                </div>
+              </details>
             </div>
             }
           </div>

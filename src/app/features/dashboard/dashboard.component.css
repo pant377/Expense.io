@@ -167,9 +167,23 @@
 .primary-workspace {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(400px, 2fr);
-  align-items: stretch;
+  align-items: start;
   gap: 1.25rem;
   margin-bottom: 1.25rem;
+}
+
+.primary-workspace > .collapsible-card {
+  align-self: start;
+}
+
+:is(
+  .expense-form-card,
+  .limits-card,
+  .analytics-card,
+  .activity-card
+) > .section-toggle {
+  top: clamp(1.25rem, 2.5vw, 1.75rem);
+  right: clamp(1.25rem, 2.5vw, 1.75rem);
 }
 
 .limits-card {
@@ -934,9 +948,24 @@ h2 {
 
 .list-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: 1rem;
   margin-bottom: 1rem;
+}
+
+.activity-card .activity-actions {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 0.5rem;
+}
+
+.activity-more-menu {
+  display: none;
 }
 
 .list-order {
@@ -944,31 +973,6 @@ h2 {
   margin-top: 0.35rem;
   color: var(--muted);
   font-size: 0.75rem;
-}
-
-.expense-count {
-  display: grid;
-  min-width: 34px;
-  height: 34px;
-  place-items: center;
-  color: var(--primary-dark);
-  background: #e7f3f1;
-  border-radius: 50%;
-  font-size: 0.82rem;
-  font-weight: 800;
-}
-
-.expense-count.filtered {
-  width: auto;
-  grid-auto-flow: column;
-  gap: 0.2rem;
-  padding: 0 0.65rem;
-  border-radius: 99px;
-}
-
-.expense-count small {
-  color: var(--muted);
-  font-size: 0.68rem;
 }
 
 .expense-list-filters {
@@ -1375,6 +1379,66 @@ h2 {
     width: min(100% - 1rem, 1180px);
     padding-top: env(safe-area-inset-top, 0);
     padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0));
+  }
+
+  :is(
+    .expense-form-card,
+    .limits-card,
+    .analytics-card,
+    .activity-card
+  ) > .section-toggle {
+    top: 1rem;
+    right: 1rem;
+  }
+
+  .activity-card .activity-actions {
+    flex-wrap: nowrap;
+  }
+
+  .activity-desktop-action {
+    display: none;
+  }
+
+  .activity-more-menu {
+    position: relative;
+    display: block;
+    margin-left: auto;
+  }
+
+  .activity-more-menu > summary {
+    min-width: 42px;
+    list-style: none;
+  }
+
+  .activity-more-menu > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .activity-more-menu[open] > summary {
+    color: white;
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+
+  .activity-more-menu-panel {
+    position: absolute;
+    top: calc(100% + 0.45rem);
+    right: 0;
+    z-index: 12;
+    display: grid;
+    width: min(230px, calc(100vw - 2rem));
+    gap: 0.4rem;
+    padding: 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(13, 33, 44, 0.2);
+  }
+
+  .activity-more-menu-panel .activity-menu-action {
+    width: 100%;
+    flex: none;
+    justify-content: flex-start;
   }
 
   .topbar {
@@ -2026,33 +2090,47 @@ h2 {
 
 .rows-per-page-container {
   display: inline-flex;
+  min-height: 42px;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0;
+  padding-left: 0.8rem;
+  overflow: hidden;
+  background: #eef6f4;
+  border: 1px solid #d3e5e2;
+  border-radius: 10px;
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--muted);
 }
 
 .rows-select {
-  height: 42px;
-  padding: 0 0.6rem;
-  border: 1px solid #d3e5e2;
-  background: #eef6f4;
+  min-width: 58px;
+  height: 40px;
+  padding: 0 0.55rem;
+  margin-left: 0.55rem;
+  border: 0;
+  border-left: 1px solid #d3e5e2;
+  background: transparent;
   color: var(--primary-dark);
   font-weight: 800;
-  border-radius: 10px;
+  border-radius: 0;
   cursor: pointer;
   outline: none;
   font-size: 0.82rem;
 }
 
-:host-context([data-theme="dark"]) .rows-select {
+:host-context([data-theme="dark"]) .rows-per-page-container {
   background-color: #1b2d34;
   border-color: #3b5059;
   color: var(--ink);
 }
 
-.rows-select:focus-visible {
+:host-context([data-theme="dark"]) .rows-select {
+  border-left-color: #3b5059;
+  color: var(--ink);
+}
+
+.rows-per-page-container:has(.rows-select:focus-visible) {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(10, 124, 116, 0.12);
 }
