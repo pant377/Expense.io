@@ -1453,18 +1453,19 @@ h2 {
     justify-content: flex-start;
   }
 
-  .topbar {
+  .dashboard-shell .topbar {
     position: sticky;
-    top: 0;
+    top: max(0.5rem, env(safe-area-inset-top, 0));
     z-index: 20;
-    width: calc(100% + 1rem);
-    min-height: 62px;
-    padding: 0.65rem 0.75rem;
-    margin-right: -0.5rem;
-    margin-left: -0.5rem;
-    background: color-mix(in srgb, var(--canvas) 88%, transparent);
-    border-bottom: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
-    backdrop-filter: blur(16px) saturate(150%);
+    width: 100%;
+    min-height: 64px;
+    padding: 0.65rem;
+    margin: 0.5rem 0 0;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(25, 48, 67, 0.1);
+    backdrop-filter: blur(18px) saturate(145%);
   }
 
   .account {

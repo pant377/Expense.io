@@ -344,7 +344,12 @@ form {
     right: 1.25rem;
   }
 
-  .auth-theme-toggle,
+  .auth-theme-toggle {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+  }
+
   .google-button,
   .submit-button,
   .field input {
