@@ -42,6 +42,14 @@ import { LanguageService } from './language.service';
       outline: 3px solid rgba(10, 124, 116, 0.18);
       outline-offset: 2px;
     }
+
+    @media (max-width: 600px) {
+      .language-toggle {
+        width: 42px;
+        height: 42px;
+        padding: 0;
+      }
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
