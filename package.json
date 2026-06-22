@@ -10,6 +10,7 @@
     "prebuild": "npm run firebase:config",
     "build": "ng build",
     "build:emulators": "ng build --configuration emulator",
+    "android:assets": "npx --yes @capacitor/assets@3.0.5 generate --android --iconBackgroundColor #051832 --iconBackgroundColorDark #051832 --splashBackgroundColor #051832 --splashBackgroundColorDark #051832 --logoSplashScale 0.2",
     "android:sync": "npm run build && npx cap sync android",
     "android:open": "npx cap open android",
     "android:run": "node scripts/run-android.mjs",
