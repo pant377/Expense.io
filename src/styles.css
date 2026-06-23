@@ -72,6 +72,23 @@ button {
   cursor: pointer;
 }
 
+@media (hover: none), (pointer: coarse) {
+  :where(
+    button,
+    .button,
+    [role="button"],
+    summary,
+    a,
+    label,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"]
+  ) {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+}
+
 app-dashboard .mobile-page-status {
   display: none;
 }
