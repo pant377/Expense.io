@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Timestamp } from 'firebase/firestore';
 import {
   catchError,
@@ -135,6 +135,7 @@ type DashboardSection =
     DismissibleMessageComponent,
     LanguageToggleComponent,
     ReactiveFormsModule,
+    RouterLink,
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',

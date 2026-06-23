@@ -1,6 +1,6 @@
 <main class="auth-shell">
   <section class="auth-intro" aria-labelledby="auth-title">
-    <a class="brand" href="/" [attr.aria-label]="t('brand.home')">
+    <a class="brand" routerLink="/" [attr.aria-label]="t('brand.home')">
       <span class="brand-mark">E</span>
       <span>Expense.io</span>
     </a>
@@ -189,5 +189,9 @@
         {{ isRegistering() ? t('auth.signIn') : t('auth.createOne') }}
       </button>
     </p>
+
+    <a class="about-page-link" routerLink="/about">
+      {{ t('nav.about') }}
+    </a>
   </section>
 </main>

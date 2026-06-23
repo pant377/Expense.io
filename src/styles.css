@@ -1937,6 +1937,7 @@ app-dashboard .expense-item.income-transaction:hover {
 
 :root[data-theme="dark"] .logout-button,
 :root[data-theme="dark"] .settings-button,
+:root[data-theme="dark"] .about-link,
 :root[data-theme="dark"] .language-toggle {
   color: var(--ink);
   background: rgba(27, 45, 52, 0.9);
@@ -1945,7 +1946,8 @@ app-dashboard .expense-item.income-transaction:hover {
 
 :root[data-theme="dark"] .language-toggle:hover,
 :root[data-theme="dark"] .logout-button:hover,
-:root[data-theme="dark"] .settings-button:hover {
+:root[data-theme="dark"] .settings-button:hover,
+:root[data-theme="dark"] .about-link:hover {
   background: #233941;
   border-color: #4d6872;
 }

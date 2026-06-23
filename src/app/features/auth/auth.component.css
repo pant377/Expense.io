@@ -284,6 +284,27 @@ form {
   font-weight: 800;
 }
 
+.about-page-link {
+  align-self: center;
+  margin-top: 0.8rem;
+  color: var(--primary);
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.about-page-link:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
+.about-page-link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
 @media (max-width: 820px) {
   :host {
     padding: 1rem;

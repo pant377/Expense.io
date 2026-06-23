@@ -1,0 +1,162 @@
+<main class="about-shell">
+  <header class="about-topbar">
+    <a class="brand" routerLink="/" [attr.aria-label]="t('brand.home')">
+      <span class="brand-mark">E</span>
+      <span>Expense.io</span>
+    </a>
+
+    <nav class="about-actions" [attr.aria-label]="t('about.navigation')">
+      <button
+        class="about-theme-toggle"
+        type="button"
+        role="switch"
+        [attr.aria-checked]="theme.isDark()"
+        [attr.aria-label]="
+          t('settings.darkMode') +
+          ': ' +
+          (theme.isDark() ? t('settings.darkModeOn') : t('settings.darkModeOff'))
+        "
+        [attr.title]="t('settings.darkMode')"
+        (click)="theme.toggle()"
+      >
+        @if (theme.isDark()) {
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+          </svg>
+        } @else {
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2"></path>
+            <path d="M12 20v2"></path>
+            <path d="m4.93 4.93 1.42 1.42"></path>
+            <path d="m17.66 17.66 1.41 1.41"></path>
+            <path d="M2 12h2"></path>
+            <path d="M20 12h2"></path>
+            <path d="m6.34 17.66-1.41 1.41"></path>
+            <path d="m19.07 4.93-1.41 1.41"></path>
+          </svg>
+        }
+      </button>
+      <app-language-toggle />
+      @if (user$ | async) {
+        <a class="button button-primary about-nav-link" routerLink="/">
+          {{ t('about.dashboard') }}
+        </a>
+      } @else {
+        <a class="button button-primary about-nav-link" routerLink="/auth">
+          {{ t('about.signIn') }}
+        </a>
+      }
+    </nav>
+  </header>
+
+  <section class="about-hero" aria-labelledby="about-title">
+    <div class="about-copy">
+      <p class="eyebrow">{{ t('about.eyebrow') }}</p>
+      <h1 id="about-title">{{ t('about.title') }}</h1>
+      <p>{{ t('about.description') }}</p>
+
+      <div class="profile-links" aria-labelledby="about-links-title">
+        <h2 id="about-links-title">{{ t('about.linksTitle') }}</h2>
+        <div>
+          <a
+            class="profile-link"
+            [href]="githubUrl"
+            target="_blank"
+            rel="noreferrer"
+            [attr.aria-label]="t('about.githubAria')"
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.52 2.87 8.36 6.84 9.72.5.1.68-.22.68-.5v-1.74c-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.56 2.35 1.11 2.92.85.09-.67.35-1.11.63-1.37-2.22-.26-4.55-1.14-4.55-5.05 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05A9.3 9.3 0 0 1 12 6.98c.85 0 1.7.12 2.5.35 1.9-1.33 2.74-1.05 2.74-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.92-2.34 4.79-4.57 5.04.36.32.68.94.68 1.9v2.8c0 .28.18.6.69.5A10.13 10.13 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"></path>
+            </svg>
+            <span>
+              <strong>{{ t('about.github') }}</strong>
+              <small>github.com/pant377</small>
+            </span>
+          </a>
+
+          <a
+            class="profile-link"
+            [href]="linkedInUrl"
+            target="_blank"
+            rel="noreferrer"
+            [attr.aria-label]="t('about.linkedinAria')"
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M6.94 8.78H3.72v10.5h3.22V8.78ZM5.33 7.35a1.88 1.88 0 1 0 0-3.75 1.88 1.88 0 0 0 0 3.75Zm14.95 6.05c0-3.17-1.7-4.9-4.12-4.9a3.56 3.56 0 0 0-3.2 1.76V8.78H9.88v10.5h3.22v-5.2c0-1.37.26-2.7 1.96-2.7 1.68 0 1.7 1.57 1.7 2.78v5.12h3.22V13.4h.3Z"></path>
+            </svg>
+            <span>
+              <strong>{{ t('about.linkedin') }}</strong>
+              <small>linkedin.com/in/pappantelis</small>
+            </span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <aside class="project-panel" aria-labelledby="project-panel-title">
+      <img src="favicon.png" alt="" aria-hidden="true">
+      <div>
+        <p class="eyebrow">{{ t('about.personalBadge') }}</p>
+        <h2 id="project-panel-title">Expense.io</h2>
+        <p>{{ t('about.stackDescription') }}</p>
+      </div>
+      <div class="project-badges" aria-hidden="true">
+        <span>{{ t('about.personalBadge') }}</span>
+        <span>{{ t('about.privateBadge') }}</span>
+        <span>{{ t('about.builtBadge') }}</span>
+      </div>
+    </aside>
+  </section>
+
+  <section class="about-grid">
+    <article>
+      <span class="detail-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M20 21a8 8 0 0 0-16 0"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      </span>
+      <h2>{{ t('about.creatorTitle') }}</h2>
+      <p>{{ t('about.creatorDescription') }}</p>
+    </article>
+
+    <article>
+      <span class="detail-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2v20"></path>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+      </span>
+      <h2>{{ t('about.projectTitle') }}</h2>
+      <p>{{ t('about.projectDescription') }}</p>
+    </article>
+
+    <article>
+      <span class="detail-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M16 18 22 12 16 6"></path>
+          <path d="M8 6 2 12 8 18"></path>
+        </svg>
+      </span>
+      <h2>{{ t('about.stackTitle') }}</h2>
+      <p>{{ t('about.stackDescription') }}</p>
+    </article>
+  </section>
+</main>

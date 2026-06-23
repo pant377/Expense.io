@@ -53,7 +53,8 @@
 }
 
 .logout-button,
-.settings-button {
+.settings-button,
+.about-link {
   display: inline-flex;
   align-items: center;
   padding: 0.55rem 0.75rem;
@@ -62,6 +63,7 @@
   border: 1px solid var(--line);
   border-radius: 10px;
   font-weight: 700;
+  text-decoration: none;
 }
 
 .settings-button {
@@ -74,6 +76,16 @@
 }
 
 .settings-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.about-link {
+  min-height: 38px;
+  gap: 0.45rem;
+}
+
+.about-link svg {
   width: 18px;
   height: 18px;
 }
@@ -1477,7 +1489,8 @@ h2 {
   }
 
   .logout-button,
-  .settings-button {
+  .settings-button,
+  .about-link {
     width: 42px;
     min-width: 42px;
     height: 42px;
@@ -1490,6 +1503,7 @@ h2 {
     display: block;
   }
 
+  .about-link span,
   .logout-button span {
     position: absolute;
     width: 1px;

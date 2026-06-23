@@ -6,7 +6,7 @@ import {
   signal,
 } from '@angular/core';
 import { ReactiveFormsModule, Validators, NonNullableFormBuilder } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { firebaseErrorMessage } from '../../core/errors/firebase-error';
@@ -22,6 +22,7 @@ import { ThemeService } from '../../core/theme/theme.service';
     ReactiveFormsModule,
     DismissibleMessageComponent,
     LanguageToggleComponent,
+    RouterLink,
   ],
   templateUrl: './auth.component.html',
   styleUrl: './auth.component.css',
