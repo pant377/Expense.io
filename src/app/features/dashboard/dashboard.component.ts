@@ -124,6 +124,15 @@ type DashboardSection =
   | 'analytics'
   | 'activity';
 
+const MOBILE_COLLAPSED_SECTIONS_STORAGE_KEY =
+  'expense-io-mobile-collapsed-sections';
+const MOBILE_COLLAPSIBLE_DASHBOARD_SECTIONS = [
+  'transaction',
+  'limits',
+  'analytics',
+  'activity',
+] as const satisfies readonly DashboardSection[];
+
 @Component({
   selector: 'app-dashboard',
   imports: [
@@ -144,9 +153,12 @@ type DashboardSection =
 export class DashboardComponent {
   private readonly mobileViewport = window.matchMedia('(max-width: 600px)');
   private readonly handleMobileViewportChange = (event: MediaQueryListEvent): void => {
-    if (!event.matches) {
-      this.collapsedSections.set(new Set());
+    if (event.matches) {
+      this.collapsedSections.set(this.loadMobileCollapsedSections());
+      return;
     }
+
+    this.collapsedSections.set(new Set());
   };
   private readonly categoryColors: Record<ExpenseCategory, string> = {
     Food: '#e0a33c',
@@ -333,6 +345,9 @@ export class DashboardComponent {
 
   constructor() {
     this.mobileViewport.addEventListener('change', this.handleMobileViewportChange);
+    this.collapsedSections.set(
+      this.mobileViewport.matches ? this.loadMobileCollapsedSections() : new Set(),
+    );
 
     this.destroyRef.onDestroy(() => {
       this.mobileViewport.removeEventListener('change', this.handleMobileViewportChange);
@@ -1609,17 +1624,55 @@ export class DashboardComponent {
       return;
     }
 
-    this.collapsedSections.update((current) => {
-      const next = new Set(current);
+    const next = new Set(this.collapsedSections());
 
-      if (next.has(section)) {
-        next.delete(section);
-      } else {
-        next.add(section);
+    if (next.has(section)) {
+      next.delete(section);
+    } else {
+      next.add(section);
+    }
+
+    this.collapsedSections.set(next);
+    this.saveMobileCollapsedSections(next);
+  }
+
+  private loadMobileCollapsedSections(): ReadonlySet<DashboardSection> {
+    try {
+      const storedSections = window.localStorage.getItem(
+        MOBILE_COLLAPSED_SECTIONS_STORAGE_KEY,
+      );
+
+      if (!storedSections) {
+        return new Set();
       }
 
-      return next;
-    });
+      const parsedSections: unknown = JSON.parse(storedSections);
+
+      if (!Array.isArray(parsedSections)) {
+        return new Set();
+      }
+
+      return new Set(parsedSections.filter(isMobileCollapsibleDashboardSection));
+    } catch {
+      return new Set();
+    }
+  }
+
+  private saveMobileCollapsedSections(
+    sections: ReadonlySet<DashboardSection>,
+  ): void {
+    const persistedSections = MOBILE_COLLAPSIBLE_DASHBOARD_SECTIONS.filter(
+      (section) => sections.has(section),
+    );
+
+    try {
+      window.localStorage.setItem(
+        MOBILE_COLLAPSED_SECTIONS_STORAGE_KEY,
+        JSON.stringify(persistedSections),
+      );
+    } catch {
+      // Collapsed sections still work for the current mobile session.
+    }
   }
 
   toggleExpenseFilters(): void {
@@ -2294,4 +2347,13 @@ export class DashboardComponent {
       })
       .sort((a, b) => b.occurredAt.toMillis() - a.occurredAt.toMillis());
   }
+}
+
+function isMobileCollapsibleDashboardSection(
+  value: unknown,
+): value is (typeof MOBILE_COLLAPSIBLE_DASHBOARD_SECTIONS)[number] {
+  return (
+    typeof value === 'string' &&
+    (MOBILE_COLLAPSIBLE_DASHBOARD_SECTIONS as readonly string[]).includes(value)
+  );
 }
